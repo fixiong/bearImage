@@ -17,7 +17,6 @@ namespace bear
 		{
 			memmove(scanline(dst, i), scanline(src, i), cl);
 		}
-
 	}
 
 	void zero(const PImage &img)
