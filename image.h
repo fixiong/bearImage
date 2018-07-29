@@ -262,7 +262,7 @@ namespace bear
 
 			for (int x = 0; x < dst.width; ++x)
 			{
-				drow[dst_ch] = std::forward<C>(c)(srow[src_ch]);
+				drow[dst_ch] = (DUnit)std::forward<C>(c)(srow[src_ch]);
 
 				drow += dst.n_channel;
 				srow += src.n_channel;

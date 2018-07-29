@@ -33,14 +33,14 @@ namespace bear
 
 		for (int y = 0; y < height(img); ++y)
 		{
-			unsigned b = (depth(img) >> 3);
+			unsigned int b = (depth(img) >> 3);
 
 			unsigned int bpp = b * n_channel(img);
 
 			unsigned char * row = scanline(img, y) + ch * b;
 			for (int x = 0; x < width(img); ++x)
 			{
-				for (int i = 0; i < b; ++i)
+				for (unsigned int i = 0; i < b; ++i)
 				{
 					row[i] = 0;
 				}
