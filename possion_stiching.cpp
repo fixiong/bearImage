@@ -45,8 +45,10 @@ static void x_d(
 	const PImage &dx,
 	const PImage &src,
 	unsigned int ch,
-	const PImage &mask)
+	const PImage &mask,
+	int max_grandient)
 {
+	int mg = max_grandient & 255;
 	for (int y = 0; y < height(src); ++y)
 	{
 		unsigned short * drow = (unsigned short *)scanline(dx, y);
@@ -69,7 +71,12 @@ static void x_d(
 			}
 			else
 			{
-				drow[x] = ((int)(srow[ch] - (srow - bpp)[ch]) << 7) + 32768;
+				int g = srow[ch] - (srow - bpp)[ch];
+
+				g = std::min(g, mg);
+				g = std::max(g, -mg);
+
+				drow[x] = (g << 7) + 32768;
 			}
 
 			srow += bpp;
@@ -81,8 +88,11 @@ static void y_d(
 	const PImage &dy,
 	const PImage &src,
 	unsigned int ch,
-	const PImage &mask)
+	const PImage &mask,
+	int max_grandient)
 {
+	int mg = max_grandient & 255;
+
 	unsigned short * drow = (unsigned short *)scanline(dy, 0);
 	for (int x = 0; x < width(src); ++x)
 	{
@@ -111,7 +121,12 @@ static void y_d(
 			}
 			else
 			{
-				drow[x] = ((int)(srow[ch] - srow_[ch]) << 7) + 32768;
+				int g = srow[ch] - srow_[ch];
+
+				g = std::min(g, mg);
+				g = std::max(g, -mg);
+
+				drow[x] = (g << 7) + 32768;
 			}
 			srow += bpp;
 			srow_ += bpp;
@@ -235,43 +250,22 @@ static void stiching(const PImage &dst, const PImage ds, unsigned int ch)
 	}
 }
 
-void poisson_stiching(
+void poisson_stiching_merged(
 	const bear::PImage &dst,
-	const bear::PImage &src1,
-	const bear::PImage &src2,
+	const bear::PImage &src,
 	const bear::PImage &_mask,
 	unsigned int format,
+	int max_grandient,
 	unsigned int iteration_time,
 	int base_level)
 {
 	Image maskbuf;
 	PImage mask;
-
 	mask_to_byte(maskbuf, mask, _mask);
-
-	mask_merg(dst, src1, src2, mask);
 
 	Image dx(size(dst), 1, 16);
 	Image dy(size(dst), 1, 16);
 	Image ds(size(dst), 1, 16);
-
-	//x_d(dx, dst, 1, mask);
-	//y_d(dy, dst, 1, mask);
-
-	//dxy_poisson_solver(ds, dx, dy, iteration_time, base_level);
-
-	//stiching(dst, ds, 1);
-
-
-	//copy_channel<unsigned char, unsigned char>(dst, 0, dst, 1, [](auto v) {return v; });
-	//copy_channel<unsigned char, unsigned char>(dst, 2, dst, 1, [](auto v) {return v; });
-
-	////copy_channel<unsigned char, unsigned short>(dst, 0, ds, 0, [](auto v) {return round_shift<8>(v); });
-	////copy_channel<unsigned char, unsigned short>(dst, 1, ds, 0, [](auto v) {return round_shift<8>(v); });
-	////copy_channel<unsigned char, unsigned short>(dst, 2, ds, 0, [](auto v) {return round_shift<8>(v); }); 
-
-
-	//stiching(dst, ds, chl[i]);
 
 	int chl[3];
 
@@ -282,11 +276,32 @@ void poisson_stiching(
 	for (int i = 0; i < 3; ++i)
 	{
 
-		x_d(dx, dst, chl[i], mask);
-		y_d(dy, dst, chl[i], mask);
+		x_d(dx, src, chl[i], mask, max_grandient);
+		y_d(dy, src, chl[i], mask, max_grandient);
 
 		dxy_poisson_solver(ds, dx, dy, 20, 0);
 
 		stiching(dst, ds, chl[i]);
 	}
+}
+
+
+void poisson_stiching(
+	const bear::PImage &dst,
+	const bear::PImage &src1,
+	const bear::PImage &src2,
+	const bear::PImage &_mask,
+	unsigned int format,
+	int max_grandient,
+	unsigned int iteration_time,
+	int base_level)
+{
+	Image maskbuf;
+	PImage mask;
+
+	mask_to_byte(maskbuf, mask, _mask);
+
+	mask_merg(src1, src1, src2, mask);
+
+	poisson_stiching_merged(dst, src1, mask, format, max_grandient, iteration_time, base_level);
 }

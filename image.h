@@ -232,6 +232,23 @@ namespace bear
 
 	void zero(const PImage &img,unsigned int ch);
 
+	template<typename Unit>
+	void fill(const PImage &img, unsigned int ch, Unit value)
+	{
+		assert(ch < img.n_channel && sizeof(Unit) == (depth(img) >> 3));
+
+		for (int y = 0; y < height(img); ++y)
+		{
+			Unit * row = (Unit *)scanline(img, y) + ch;
+			for (int x = 0; x < width(img); ++x)
+			{
+				row[ch] = value;
+				row += img.n_channel;
+			}
+		}
+
+	}
+
 	void assert_range(const PImage &img, void * ptr);
 
 	PImage clip_image(const PImage &img, int x_offset, int y_offset, int width, int height);
