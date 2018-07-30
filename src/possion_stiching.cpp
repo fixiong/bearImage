@@ -1,4 +1,3 @@
-
 #include "possion_stiching.h"
 #include "possion_solver.h"
 
@@ -42,6 +41,49 @@ static void y_d(const PImage &img)
 }
 
 
+template<typename T>
+struct _ZERO_PS {};
+
+template<>
+struct _ZERO_PS<float>
+{
+	constexpr static float run()
+	{
+		return 0.0f;
+	}
+
+	static float to_unit(int v)
+	{
+		return (float)v;
+	}
+
+	static void to_char(unsigned char &dst,float v)
+	{
+		dst = limiteU8((int)(dst - v + 0.5f));
+	}
+};
+
+template<>
+struct _ZERO_PS<unsigned short>
+{
+	constexpr static unsigned short run()
+	{
+		return 32768;
+	}
+
+	static unsigned short to_unit(int v)
+	{
+		return (v << 7) + 32768;
+	}
+
+	static void to_char(unsigned char &dst, unsigned short v)
+	{
+		dst = limiteU8(dst - round_shift<7>((int)v - 32768));
+	}
+};
+
+
+template<typename Unit>
 static void x_d(
 	const PImage &dx,
 	const PImage &src,
@@ -49,16 +91,18 @@ static void x_d(
 	const PImage &mask,
 	int max_grandient)
 {
+	typedef _ZERO_PS<Unit> ZP;
+
 	int mg = max_grandient & 255;
 	for (int y = 0; y < height(src); ++y)
 	{
-		unsigned short * drow = (unsigned short *)scanline(dx, y);
+		Unit * drow = (Unit *)scanline(dx, y);
 		unsigned char * srow = (unsigned char *)scanline(src, y);
 		unsigned char * mrow = (unsigned char *)scanline(mask, y);
 
 		int bpp = src.n_channel;
 
-		drow[0] = 32768;
+		drow[0] = ZP::run();
 		srow += bpp;
 
 		for (int x = 1; x < width(src); ++x)
@@ -68,7 +112,7 @@ static void x_d(
 
 			if (f1 == f2)
 			{
-				drow[x] = 32768;
+				drow[x] = ZP::run();
 			}
 			else
 			{
@@ -77,7 +121,7 @@ static void x_d(
 				g = std::min(g, mg);
 				g = std::max(g, -mg);
 
-				drow[x] = (g << 7) + 32768;
+				drow[x] = ZP::to_unit(g);
 			}
 
 			srow += bpp;
@@ -85,6 +129,7 @@ static void x_d(
 	}
 }
 
+template<typename Unit>
 static void y_d(
 	const PImage &dy,
 	const PImage &src,
@@ -92,17 +137,19 @@ static void y_d(
 	const PImage &mask,
 	int max_grandient)
 {
+	typedef _ZERO_PS<Unit> ZP;
+
 	int mg = max_grandient & 255;
 
-	unsigned short * drow = (unsigned short *)scanline(dy, 0);
+	Unit * drow = (Unit *)scanline(dy, 0);
 	for (int x = 0; x < width(src); ++x)
 	{
-		drow[x] = 32768;
+		drow[x] = ZP::run();
 	}
 
 	for (int y = 1; y < height(src); ++y)
 	{
-		unsigned short * drow = (unsigned short *)scanline(dy, y);
+		Unit * drow = (Unit *)scanline(dy, y);
 		unsigned char * srow = (unsigned char *)scanline(src, y);
 		unsigned char * mrow = (unsigned char *)scanline(mask, y);
 
@@ -118,7 +165,7 @@ static void y_d(
 
 			if (f1 == f2)
 			{
-				drow[x] = 32768;
+				drow[x] = ZP::run();
 			}
 			else
 			{
@@ -127,7 +174,7 @@ static void y_d(
 				g = std::min(g, mg);
 				g = std::max(g, -mg);
 
-				drow[x] = (g << 7) + 32768;
+				drow[x] = ZP::to_unit(g);
 			}
 			srow += bpp;
 			srow_ += bpp;
@@ -147,15 +194,15 @@ static void mask_to_byte(Image &maskbuf,PImage &mask,const PImage &_mask)
 		{
 		case 16:
 			copy_channel<unsigned char, unsigned short>(
-				mask, 0, _mask, 0, [](auto v) {return v != 0 ? 255 : 0; });
+				mask, 0, _mask, 0, [](unsigned short v) {return v != 0 ? 255 : 0; });
 			break;
 		case 32:
 			copy_channel<unsigned char, unsigned int>(
-				mask, 0, _mask, 0, [](auto v) {return v != 0 ? 255 : 0; });
+				mask, 0, _mask, 0, [](unsigned int v) {return v != 0 ? 255 : 0; });
 			break;
 		default:
 			copy_channel<unsigned char, unsigned char>(
-				mask, 0, _mask, 0, [](auto v) {return v != 0 ? 255 : 0; });
+				mask, 0, _mask, 0, [](unsigned char v) {return v != 0 ? 255 : 0; });
 		}
 	}
 	else
@@ -235,19 +282,49 @@ void mask_merg(
 	}
 }
 
+template<typename Unit>
 static void stiching(const PImage &dst, const PImage ds, unsigned int ch)
 {
 	for (int y = 0; y < height(dst); ++y)
 	{
 		unsigned char * drow = (unsigned char *)scanline(dst, y);
-		unsigned short * srow = (unsigned short *)scanline(ds, y);
+		Unit * srow = (Unit *)scanline(ds, y);
 
 		for (int x = 0; x < width(dst); ++x)
 		{
-			drow[ch] = limiteU8(drow[ch] - round_shift<7>(srow[x] - 32768));
+			_ZERO_PS<Unit>::to_char(drow[ch], srow[x]);
 
 			drow += dst.n_channel;
 		}
+	}
+}
+
+template<typename Unit>
+static void _poisson_stiching_merged(
+	const bear::PImage &dst,
+	const bear::PImage &src,
+	const bear::PImage &mask,
+	unsigned int format,
+	PStichingParam param)
+{
+	Image dx(size(dst), 1, sizeof(Unit) << 3);
+	Image dy(size(dst), 1, sizeof(Unit) << 3);
+	Image ds(size(dst), 1, sizeof(Unit) << 3);
+
+	int chl[3];
+
+	chl[0] = FI_RED(format);
+	chl[1] = FI_GREEN(format);
+	chl[2] = FI_BLUE(format);
+
+	for (int i = 0; i < 3; ++i)
+	{
+		x_d<Unit>(dx, src, chl[i], mask, param.max_grandient);
+		y_d<Unit>(dy, src, chl[i], mask, param.max_grandient);
+
+		dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+
+		stiching<Unit>(dst, ds, chl[i]);
 	}
 }
 
@@ -256,35 +333,19 @@ void poisson_stiching_merged(
 	const bear::PImage &src,
 	const bear::PImage &_mask,
 	unsigned int format,
-	int max_grandient,
-	unsigned int iteration_time,
-	int base_level)
+	PStichingParam param)
 {
 	Image maskbuf;
 	PImage mask;
 	mask_to_byte(maskbuf, mask, _mask);
 
-	Image dx(size(dst), 1, 16);
-	Image dy(size(dst), 1, 16);
-	Image ds(size(dst), 1, 16);
-
-	int chl[3];
-
-	chl[0] = FI_RED(format);
-	chl[1] = FI_GREEN(format);
-	chl[2] = FI_BLUE(format);
-
-
-	for (int i = 0; i < 3; ++i)
+	if (param.float_precision)
 	{
-
-		x_d(dx, src, chl[i], mask, max_grandient);
-		y_d(dy, src, chl[i], mask, max_grandient);
-
-		dxy_poisson_solver(ds, dx, dy, 20, 0);
-
-
-		stiching(dst, ds, chl[i]);
+		_poisson_stiching_merged<float>(dst, src, mask, format, param);
+	}
+	else
+	{
+		_poisson_stiching_merged<unsigned short>(dst, src, mask, format, param);
 	}
 }
 
@@ -295,16 +356,13 @@ void poisson_stiching(
 	const bear::PImage &src2,
 	const bear::PImage &_mask,
 	unsigned int format,
-	int max_grandient,
-	unsigned int iteration_time,
-	int base_level)
+	PStichingParam param)
 {
 	Image maskbuf;
 	PImage mask;
-
 	mask_to_byte(maskbuf, mask, _mask);
 
 	mask_merg(src1, src1, src2, mask);
 
-	poisson_stiching_merged(dst, src1, mask, format, max_grandient, iteration_time, base_level);
+	poisson_stiching_merged(dst, src1, mask, format, param);
 }
