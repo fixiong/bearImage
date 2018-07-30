@@ -31,6 +31,7 @@ namespace bear
 		}
 		return lum;
 	}
+
 }
 
 #endif

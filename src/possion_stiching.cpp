@@ -1,3 +1,4 @@
+
 #include "possion_stiching.h"
 #include "possion_solver.h"
 
@@ -273,6 +274,7 @@ void poisson_stiching_merged(
 	chl[1] = FI_GREEN(format);
 	chl[2] = FI_BLUE(format);
 
+
 	for (int i = 0; i < 3; ++i)
 	{
 
@@ -280,6 +282,7 @@ void poisson_stiching_merged(
 		y_d(dy, src, chl[i], mask, max_grandient);
 
 		dxy_poisson_solver(ds, dx, dy, 20, 0);
+
 
 		stiching(dst, ds, chl[i]);
 	}

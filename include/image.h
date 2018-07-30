@@ -293,7 +293,7 @@ namespace bear
 
 	inline PImage cv_use_roi(const IplImage & img)
 	{
-		if (!img->roi)return to_p_image(img);
+		if (!img.roi)return to_p_image(img);
 
 		PImage ret;
 
@@ -303,9 +303,9 @@ namespace bear
 		ret.depth = img.depth;
 		ret.width_step = img.widthStep;
 		ret.data = (unsigned char *)(
-			img->imageData +
-			img->roi->yOffset * img->widthStep +
-			img->roi->xOffset * (src->depth >> 3) * src->nChannels);
+			img.imageData +
+			img.roi->yOffset * img.widthStep +
+			img.roi->xOffset * (img.depth >> 3) * img.nChannels);
 
 		return ret;
 	}
@@ -330,7 +330,7 @@ namespace bear
 		{
 			type = CV_MAKETYPE(CV_32F, img.n_channel);
 		}
-		cv::Mat ret(img.height, img.width, type, img.date, img.width_step);
+		cv::Mat ret(img.height, img.width, type, img.data, img.width_step);
 		return ret;
 	}
 
