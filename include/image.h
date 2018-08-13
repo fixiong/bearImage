@@ -171,7 +171,12 @@ namespace bear
 			return PSize(width, height);
 		}
 
-		operator bool()
+		unsigned char * scanline(int y) const
+		{
+			return data + y * (int)width_step;
+		}
+
+		operator bool() const
 		{
 			return 0 != data;
 		}
@@ -211,7 +216,7 @@ namespace bear
 
 	inline unsigned char * scanline(const PImage &img,int y)
 	{
-		return img.data + y * (int)img.width_step;
+		return img.scanline(y);
 	}
 
 	inline unsigned char * scanline_bound(const PImage &img, int y)
@@ -232,29 +237,50 @@ namespace bear
 
 	void zero(const PImage &img,unsigned int ch);
 
-	template<typename Unit>
-	void fill(const PImage &img, unsigned int ch, Unit value)
+	template<typename Unit,typename C>
+	void for_each_pixel(const PImage &img, C && c)
 	{
-		assert(ch < img.n_channel && sizeof(Unit) == (depth(img) >> 3));
+		assert(sizeof(Unit) == (depth(img) >> 3));
 
 		for (int y = 0; y < height(img); ++y)
 		{
-			Unit * row = (Unit *)scanline(img, y) + ch;
+			Unit * row = (Unit *)scanline(img, y);
 			for (int x = 0; x < width(img); ++x)
 			{
-				row[ch] = value;
+				std::forward(c)(row);
 				row += img.n_channel;
 			}
 		}
-
 	}
 
-	void assert_range(const PImage &img, void * ptr);
+	template<typename DUnit,typename SUnit, typename C>
+	void transform_pixel(
+		const PImage &dst,
+		const PImage &src,
+		C && c)
+	{
+		assert(
+			dst.width == src.width &&
+			dst.height == src.height &&
+			sizeof(DUnit) == (depth(dst) >> 3) &&
+			sizeof(SUnit) == (depth(src) >> 3));
 
-	PImage clip_image(const PImage &img, int x_offset, int y_offset, int width, int height);
+		for (int y = 0; y < height(img); ++y)
+		{
+			DUnit * drow = (DUnit *)scanline(dst, y);
+			SUnit * srow = (SUnit *)scanline(src, y);
+			for (int x = 0; x < width(img); ++x)
+			{
+				std::forward(c)(drow,srow);
+				drow += img.n_channel;
+				srow += img.n_channel;
+			}
+		}
+	}
+
 
 	template<typename DUnit>
-	struct _COPY_CHANNEL_DFC
+	struct _TRANSFORM_CHANNEL_DFC
 	{
 		template<typename SUnit>
 		DUnit operator () (SUnit v)
@@ -263,14 +289,16 @@ namespace bear
 		}
 	};
 
-	template<typename DUnit,typename SUnit,typename C = _COPY_CHANNEL_DFC<DUnit> >
-	void copy_channel(const PImage &dst, unsigned int dst_ch, const PImage &src, unsigned int src_ch, C && c = C())
+	template<typename DUnit, typename SUnit, typename C = _TRANSFORM_CHANNEL_DFC<DUnit> >
+	void transform_channel(const PImage &dst, unsigned int dst_ch, const PImage &src, unsigned int src_ch, C && c = C())
 	{
 		assert(
 			dst.width == src.width &&
 			dst.height == src.height &&
 			dst_ch < dst.n_channel &&
-			src_ch < src.n_channel);
+			src_ch < src.n_channel &&
+			sizeof(DUnit) == (depth(dst) >> 3) &&
+			sizeof(SUnit) == (depth(src) >> 3));
 
 		for (int y = 0; y < dst.height; ++y)
 		{
@@ -286,6 +314,39 @@ namespace bear
 			}
 		}
 	}
+
+	template<typename Unit>
+	void fill_channel(const PImage &img, unsigned int ch, Unit value)
+	{
+		assert(ch < img.n_channel);
+
+		for_each_pixel<Unit>(img, [value](Unit * p) 
+		{
+			p[ch] = value;
+		});
+	}
+
+	template<typename Unit>
+	void fill(const PImage &img, Unit value)
+	{
+		assert(sizeof(Unit) == (depth(img) >> 3));
+
+		for (int y = 0; y < height(img); ++y)
+		{
+			Unit * row = (Unit *)scanline(img, y);
+			int mx = width(img) * n_channel(img);
+			for (int x = 0; x < mx; ++x)
+			{
+				*row = value;
+				++row;
+			}
+		}
+	}
+
+	void assert_range(const PImage &img, void * ptr);
+
+	PImage clip_image(const PImage &img, int x_offset, int y_offset, int width, int height);
+
 
 
 
