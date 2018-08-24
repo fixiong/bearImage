@@ -307,10 +307,10 @@ void poisson_stiching(
 
 
 template<typename C>
-static void for_each_img(const vector<vector<PImage>> &src,C && c)
+static void for_each_img(const vector<vector<PImage>> &src,unsigned int rd, C && c)
 {
-	int nw = src[0].size();
-	int nh = src.size();
+	int nw = (int)src[0].size();
+	int nh = (int)src.size();
 
 	vector<int> bws;
 	vector<int> bhs;
@@ -326,11 +326,11 @@ static void for_each_img(const vector<vector<PImage>> &src,C && c)
 
 		if (0 != y)
 		{
-			--bh;
-			++py;
+			bh -= rd;
+			py += rd;
 		}
 
-		if (nh - 1 != y) --bh;
+		if (nh - 1 != y) bh -= rd;
 
 		bhs.push_back(bh);
 
@@ -345,11 +345,11 @@ static void for_each_img(const vector<vector<PImage>> &src,C && c)
 
 			if (0 != x)
 			{
-				--bw;
-				++px;
+				bw -= rd;
+				px += rd;
 			}
 
-			if (nw - 1 != x) --bw;
+			if (nw - 1 != x) bw -= rd;
 
 			if (y)assert(bw == bws[x]);
 			else bws.push_back(bw);
@@ -372,16 +372,17 @@ template<typename Unit>
 static void _poisson_stiching_m(
 	const bear::PImage &dst,
 	const vector<vector<PImage>> &src,
+	unsigned int rd,
 	unsigned int format,
 	PStichingParam param)
 {
 
 	_poisson_stiching_inner<Unit>(
 		dst, dst,
-		[&src, &param](PImage dx, int ch)
+		[&src, &param, rd](PImage dx, int ch)
 	{
 		clear_d<Unit>(dx);
-		for_each_img(src, [&dx, ch, &param](
+		for_each_img(src, rd, [&dx, ch, &param, rd](
 			const vector<vector<PImage>> &src,
 			int x, int y,
 			PSize bs,
@@ -394,19 +395,19 @@ static void _poisson_stiching_m(
 			auto img1 = src[y][x];
 			auto img2 = src[y][x + 1];
 
-			img1 = clip_image(img1, img1.width - 2, p.y, 2, bs.height);
-			img2 = clip_image(img2, 0, p.y, 2, bs.height);
+			img1 = clip_image(img1, img1.width - rd * 2, p.y, rd * 2, bs.height);
+			img2 = clip_image(img2, 0, p.y, rd * 2, bs.height);
 
-			auto dst = clip_image(dx, cp.x + bs.width - 1, cp.y, 2, bs.height);
+			auto dst = clip_image(dx, cp.x + bs.width - rd, cp.y, rd * 2, bs.height);
 
 			x_d_p<Unit>(dst, img1, img2, ch, param.max_grandient);
 
 		});
 	},
-		[&src, &param](PImage dy, int ch)
+		[&src, &param, rd](PImage dy, int ch)
 	{
 		clear_d<Unit>(dy);
-		for_each_img(src, [&dy, ch, &param](
+		for_each_img(src, rd, [&dy, ch, &param, rd](
 			const vector<vector<PImage>> &src,
 			int x, int y,
 			PSize bs,
@@ -419,10 +420,10 @@ static void _poisson_stiching_m(
 			auto img1 = src[y][x];
 			auto img2 = src[y + 1][x];
 
-			img1 = clip_image(img1, p.x, img1.height - 2, bs.width, 2);
-			img2 = clip_image(img2, p.x, 0, bs.width, 2);
+			img1 = clip_image(img1, p.x, img1.height - rd * 2, bs.width, rd * 2);
+			img2 = clip_image(img2, p.x, 0, bs.width, rd * 2);
 
-			auto dst = clip_image(dy, cp.x, cp.y + bs.height - 1, bs.width, 2);
+			auto dst = clip_image(dy, cp.x, cp.y + bs.height - rd, bs.width, rd * 2);
 
 			y_d_p<Unit>(dst, img1, img2, ch, param.max_grandient);
 		});
@@ -437,6 +438,7 @@ static void _poisson_stiching_m(
 void poisson_stiching(
 	const bear::PImage &dst,
 	const vector<vector<PImage>> &src,
+	unsigned int rd,
 	unsigned int format,
 	PStichingParam param)
 {
@@ -444,7 +446,7 @@ void poisson_stiching(
 		n_channel(dst) == FI_BPP(format) &&
 		8 == depth(dst));
 
-	for_each_img(src, [&dst](
+	for_each_img(src, rd, [&dst](
 		const vector<vector<PImage>> &src,
 		int x,int y,
 		PSize bs,
@@ -463,10 +465,10 @@ void poisson_stiching(
 
 	if (param.float_precision)
 	{
-		_poisson_stiching_m<float>(dst, src, format, param);
+		_poisson_stiching_m<float>(dst, src, rd, format, param);
 	}
 	else
 	{
-		_poisson_stiching_m<unsigned short>(dst, src, format, param);
+		_poisson_stiching_m<unsigned short>(dst, src, rd, format, param);
 	}
 }

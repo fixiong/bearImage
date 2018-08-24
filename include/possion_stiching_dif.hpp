@@ -416,30 +416,29 @@ static void x_d_p(
 	int mg = max_grandient & 255;
 
 	int bpp = src1.n_channel;
-
-	unsigned char * start_src1 = scanline(src1, 0);
-	unsigned char * start_src2 = scanline(src2, 0);
-	unsigned char * start_dst = scanline(dx, 0);
+	
+	unsigned int rd = dx.width / 2;
 
 	for (int i = 0; i < dx.height; ++i)
 	{
-		int g = start_src2[bpp + ch] - start_src1[ch];
+		unsigned char * srow1 = pick_pixel(src1, 0, i);
+		unsigned char * srow2 = pick_pixel(src2, 0, i);
 
-		int g1 = start_src1[bpp + ch] - start_src1[ch];
-		int g2 = start_src2[bpp + ch] - start_src2[ch];
+		int t = 0;
+		for (int x = 0; x < dx.width; ++x)
+		{
+			t += srow2[ch] - srow1[ch];
 
-		int pg = (g1 + g2) >> 1;
+			srow1 += bpp;
+			srow2 += bpp;
+		}
 
-		g -= pg;
+		int g = (int)floor((float)t / dx.width + 0.5f);
 
 		g = std::min(g, mg);
 		g = std::max(g, -mg);
 
-		*((Unit *)start_dst) = ZP::to_unit(g);
-
-		start_src1 += src1.width_step;
-		start_src2 += src2.width_step;
-		start_dst += dx.width_step;
+		*(Unit *)pick_pixel(dx, rd, i) = ZP::to_unit(g);
 	}
 }
 
@@ -456,33 +455,28 @@ static void y_d_p(
 
 	int bpp = src1.n_channel;
 
-	unsigned char * _start_src1 = scanline(src1, 0);
-	unsigned char * start_src1 = scanline(src1, 1);
-	unsigned char * _start_src2 = scanline(src2, 0);
-	unsigned char * start_src2 = scanline(src2, 1);
-	Unit * start_dst = (Unit *)scanline(dy, 0);
+	unsigned int rd = dy.height / 2;
 
 	for (int i = 0; i < dy.width; ++i)
 	{
-		int g = start_src2[ch] - _start_src1[ch];
+		unsigned char * srow1 = pick_pixel(src1, i, 0);
+		unsigned char * srow2 = pick_pixel(src2, i, 0);
 
-		int g1 = start_src1[ch] - _start_src1[ch];
-		int g2 = start_src2[ch] - _start_src2[ch];
+		int t = 0;
+		for (int y = 0; y < dy.height; ++y)
+		{
+			t += srow2[ch] - srow1[ch];
 
-		int pg = (g1 + g2) >> 1;
+			srow1 += src1.width_step;
+			srow2 += src2.width_step;
+		}
 
-		g -= pg;
+		int g = (int)floor((float)t / dy.height + 0.5f);
 
 		g = std::min(g, mg);
 		g = std::max(g, -mg);
 
-		*start_dst = ZP::to_unit(g);
-
-		start_src1 += bpp;
-		_start_src1 += bpp;
-		start_src2 += bpp;
-		_start_src2 += bpp;
-		++start_dst;
+		*(Unit *)pick_pixel(dy, i, rd) = ZP::to_unit(g);
 	}
 }
 

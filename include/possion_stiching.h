@@ -89,6 +89,7 @@ void poisson_stiching_merged(
 void poisson_stiching(
 	const bear::PImage &dst,
 	const std::vector<std::vector<bear::PImage>> &src,
+	unsigned int redundance,
 	unsigned int format,
 	PStichingParam param = PStichingParam());
 
