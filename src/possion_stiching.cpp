@@ -130,7 +130,7 @@ static void stiching(const PImage &dst, const PImage ds, unsigned int ch)
 		{
 			//unsigned char u = 128;
 			//_ZERO_PS<Unit>::to_char(u, srow[x]);
-			//drow[ch] = u;
+			//drow[ch] = 255 - u;
 
 			_ZERO_PS<Unit>::to_char(drow[ch], srow[x]);
 
@@ -230,36 +230,6 @@ static void _poisson_stiching_merged(
 		format,
 		param
 	);
-}
-
-
-template<typename Unit>
-static void _poisson_stiching(
-	const bear::PImage &dst,
-	const vector<vector<PImage>> &src,
-	unsigned int format,
-	PStichingParam param)
-{
-
-	_poisson_stiching_inner(
-		dst, src,
-		[&](PImage dx, int ch)
-	{
-		if (mm.mask)
-			x_d<Unit>(dx, src, ch, mask, param.max_grandient);
-		else
-			x_d<Unit>(dx, src, ch, mm, param.max_grandient);
-	},
-		[&](PImage dy, int ch)
-	{
-		if (mm.mask)
-			y_d<Unit>(dy, src, ch, mask, param.max_grandient);
-		else
-			y_d<Unit>(dy, src, ch, mm, param.max_grandient);
-	},
-		format,
-		param
-		);
 }
 
 void poisson_stiching_merged(

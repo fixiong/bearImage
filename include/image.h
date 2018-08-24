@@ -265,11 +265,11 @@ namespace bear
 			sizeof(DUnit) == (depth(dst) >> 3) &&
 			sizeof(SUnit) == (depth(src) >> 3));
 
-		for (int y = 0; y < height(img); ++y)
+		for (int y = 0; y < height(dst); ++y)
 		{
 			DUnit * drow = (DUnit *)scanline(dst, y);
 			SUnit * srow = (SUnit *)scanline(src, y);
-			for (int x = 0; x < width(img); ++x)
+			for (int x = 0; x < width(dst); ++x)
 			{
 				std::forward(c)(drow,srow);
 				drow += img.n_channel;
@@ -320,7 +320,7 @@ namespace bear
 	{
 		assert(ch < img.n_channel);
 
-		for_each_pixel<Unit>(img, [value](Unit * p) 
+		for_each_pixel<Unit>(img, [value,ch](Unit * p) 
 		{
 			p[ch] = value;
 		});

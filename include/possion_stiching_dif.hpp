@@ -2,6 +2,7 @@
 #define _POSSION_STICHING_DIF_HPP
 
 #include "possion_stiching.h"
+#include <memory.h>
 
 
 using namespace bear;
