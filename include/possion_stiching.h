@@ -85,4 +85,11 @@ void poisson_stiching_merged(
 	unsigned int format,
 	PStichingParam param = PStichingParam());
 
+
+void poisson_stiching(
+	const bear::PImage &dst,
+	const std::vector<std::vector<bear::PImage>> &src,
+	unsigned int format,
+	PStichingParam param = PStichingParam());
+
 #endif

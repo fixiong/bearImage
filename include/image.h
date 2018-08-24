@@ -344,8 +344,12 @@ namespace bear
 	}
 
 	void assert_range(const PImage &img, void * ptr);
+	PImage clip_image(const PImage &img, PRect rect);
 
-	PImage clip_image(const PImage &img, int x_offset, int y_offset, int width, int height);
+	inline PImage clip_image(const PImage &img, int x_offset, int y_offset, int width, int height)
+	{
+		return clip_image(img,PRect(x_offset, y_offset, width, height));
+	}
 
 
 

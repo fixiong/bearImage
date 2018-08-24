@@ -10,396 +10,10 @@
 
 #include "utility.hpp"
 
+#include "possion_stiching_dif.hpp"
+
 using namespace bear;
 using namespace std;
-
-
-static void x_d(const PImage &img)
-{
-	for (int y = 0; y < height(img); ++y)
-	{
-		unsigned short * row = (unsigned short *)scanline(img, y);
-		for (int x = width(img) - 1; x > 0; --x)
-		{
-			row[x] = row[x] - row[x - 1] + 32768;
-		}
-
-		row[0] = 32768;
-	}
-}
-
-
-static void y_d(const PImage &img)
-{
-	for (int y = height(img) - 1; y >= 0; --y)
-	{
-		unsigned short * row_1 = (unsigned short *)scanline_bound(img, y - 1);
-		unsigned short * row = (unsigned short *)scanline(img, y);
-		for (int x = 0; x < width(img); ++x)
-		{
-			row[x] = row[x] - row_1[x] + 32768;
-		}
-	}
-}
-
-
-template<typename T>
-struct _ZERO_PS {};
-
-template<>
-struct _ZERO_PS<float>
-{
-	constexpr static float run()
-	{
-		return 0.0f;
-	}
-
-	static float to_unit(int v)
-	{
-		return (float)v;
-	}
-
-	static void to_char(unsigned char &dst,float v)
-	{
-		dst = limiteU8((int)(dst - v + 0.5f));
-	}
-};
-
-template<>
-struct _ZERO_PS<unsigned short>
-{
-	constexpr static unsigned short run()
-	{
-		return 32768;
-	}
-
-	static unsigned short to_unit(int v)
-	{
-		return (v << 7) + 32768;
-	}
-
-	static void to_char(unsigned char &dst, unsigned short v)
-	{
-		dst = limiteU8(dst - round_shift<7>((int)v - 32768));
-	}
-};
-
-
-template<typename Unit>
-static void x_d(
-	const PImage &dx,
-	const PImage &src,
-	unsigned int ch,
-	const PImage &mask,
-	int max_grandient)
-{
-	typedef _ZERO_PS<Unit> ZP;
-
-	int mg = max_grandient & 255;
-	int bpp = src.n_channel;
-
-	fill(dx, (Unit)ZP::run());
-
-	for (int y = 0; y < height(src); ++y)
-	{
-		Unit * drow = (Unit *)scanline(dx, y);
-		unsigned char * srow = (unsigned char *)scanline(src, y);
-		unsigned char * mrow = (unsigned char *)scanline(mask, y);
-
-		srow += bpp;
-
-		for (int x = 1; x < width(src); ++x)
-		{
-			bool f1 = 0 != mrow[x - 1];
-			bool f2 = 0 != mrow[x];
-
-			if (f1 != f2)
-			{
-				int g = srow[ch] - (srow - bpp)[ch];
-
-				g = std::min(g, mg);
-				g = std::max(g, -mg);
-
-				drow[x] = ZP::to_unit(g);
-			}
-
-			srow += bpp;
-		}
-	}
-}
-
-template<typename Unit>
-static void y_d(
-	const PImage &dy,
-	const PImage &src,
-	unsigned int ch,
-	const PImage &mask,
-	int max_grandient)
-{
-	typedef _ZERO_PS<Unit> ZP;
-
-	int mg = max_grandient & 255;
-	int bpp = src.n_channel;
-
-	fill(dy, (Unit)ZP::run());
-
-	for (int y = 1; y < height(src); ++y)
-	{
-		Unit * drow = (Unit *)scanline(dy, y);
-		unsigned char * srow = (unsigned char *)scanline(src, y);
-		unsigned char * mrow = (unsigned char *)scanline(mask, y);
-
-		unsigned char * srow_ = (unsigned char *)scanline(src, y - 1);
-		unsigned char * mrow_ = (unsigned char *)scanline(mask, y - 1);
-
-		for (int x = 0; x < width(src); ++x)
-		{
-			bool f1 = 0 != mrow_[x];
-			bool f2 = 0 != mrow[x];
-
-			if (f1 != f2)
-			{
-				int g = srow[ch] - srow_[ch];
-
-				g = std::min(g, mg);
-				g = std::max(g, -mg);
-
-				drow[x] = ZP::to_unit(g);
-			}
-			srow += bpp;
-			srow_ += bpp;
-		}
-	}
-}
-
-static void conv_hst(vector<unsigned int> &hst)
-{
-	unsigned int buf[5] = {
-		0,0,0,hst[0],hst[1],
-	};
-
-	for (unsigned int i = 0; i < hst.size(); ++i)
-	{
-		move(buf + 1, buf + 5, buf);
-		buf[4] = (i < hst.size() - 2) ? hst[i + 2] : 0;
-
-		hst[i] = accumulate(buf, buf + 5, 0);
-	}
-}
-
-
-struct LimiteBound
-{
-	unsigned int tt;
-	int maxg, ming;
-	vector<unsigned int> hst,convhst;
-
-	void init()
-	{
-		hst.resize(511);
-	}
-
-	void clear()
-	{
-		tt = 0;
-		memset(&hst[0], 0, hst.size() * sizeof(unsigned int));
-	}
-
-	void stat(int ss1, int ss0)
-	{
-		int lm = maxg >> 1;
-
-		if (ss1 > lm || ss0 > lm)
-		{
-			unsigned int g = ss1 - ss0 + 255;
-			++hst[g];
-			++tt;
-		}
-
-	}
-
-	void get_limite(
-		float ignore,
-		float relax)
-	{
-		unsigned int num = (unsigned int)(tt * (1.0f - ignore));
-		if (num < 5)return;
-
-		convhst = hst;
-
-		for (int i = 0; i < 3; ++i)conv_hst(convhst);
-
-		int me = (int)(max_element(convhst.begin(), convhst.end()) - convhst.begin());
-
-		unsigned int acc = hst[me];
-
-		int min_l = 0;
-		int max_l = 0;
-
-		for (int i = 1; i < 511; ++i)
-		{
-			if (acc >= num)break;
-
-			if (me - i >= 0 && hst[me - i])
-			{
-				acc += hst[me - i];
-				min_l = -i;
-			}
-			if (me + i < (int)hst.size() && hst[me + i])
-			{
-				acc += hst[me + i];
-				max_l = i;
-			}
-		}
-
-		min_l = (int)(min_l*relax);
-		max_l = (int)(max_l*relax);
-
-		ming = max(ming, me + min_l - 255);
-		maxg = min(maxg, me + max_l - 255);
-
-		//ming = min(ming, 0);
-		//maxg = max(maxg, 0);
-	}
-};
-
-template<typename Unit>
-static void x_d(
-	const PImage &dx,
-	const PImage &src,
-	unsigned int ch,
-	MakeMask &mm,
-	int max_grandient)
-{
-	typedef _ZERO_PS<Unit> ZP;
-
-	int bpp = src.n_channel;
-
-	fill(dx, (Unit)ZP::run());
-
-	LimiteBound lb;
-
-	if (mm.fac.enable)lb.init();
-
-	for (unsigned int y_b = 0; y_b < mm.h_border.size(); ++y_b)
-	{
-		int start_y = y_b ? mm.h_border[y_b - 1] : 0;
-		int end_y = mm.h_border[y_b];
-
-		int ph = end_y - start_y;
-		if (!ph)continue;
-
-		for (unsigned int x_b = 0; x_b < mm.w_border.size() - 1; ++x_b)
-		{
-			int x = mm.w_border[x_b];
-
-			lb.maxg = max_grandient & 255;
-			lb.ming = -lb.maxg;
-
-			if (mm.fac.enable)
-			{
-				lb.clear();
-
-				unsigned char * start_src = pick_pixel(src, x - 1, start_y);
-
-				for (int i = 0; i < ph; ++i)
-				{
-					lb.stat(start_src[bpp + ch], start_src[ch]);
-					start_src += src.width_step;
-				}
-
-				lb.get_limite(mm.fac.ignore, mm.fac.relax);
-			}
-
-			unsigned char * start_src = pick_pixel(src, x - 1, start_y);
-			unsigned char * start_dst = pick_pixel(dx, x, start_y);
-
-			for (int i = 0; i < ph; ++i)
-			{
-				int g = start_src[bpp + ch] - start_src[ch];
-
-				g = std::min(g, lb.maxg);
-				g = std::max(g, lb.ming);
-
-				*((Unit *)start_dst) = ZP::to_unit(g);
-
-				start_src += src.width_step;
-				start_dst += dx.width_step;
-			}
-		}
-	}
-}
-
-template<typename Unit>
-static void y_d(
-	const PImage &dy,
-	const PImage &src,
-	unsigned int ch,
-	MakeMask &mm,
-	int max_grandient)
-{
-	typedef _ZERO_PS<Unit> ZP;
-
-	int bpp = src.n_channel;
-
-	fill(dy, (Unit)ZP::run());
-
-	LimiteBound lb;
-
-	if (mm.fac.enable)lb.init();
-
-	for (unsigned int x_b = 0; x_b < mm.w_border.size(); ++x_b)
-	{
-		int start_x = x_b ? mm.w_border[x_b - 1] : 0;
-		int end_x = mm.w_border[x_b];
-
-		int ph = end_x - start_x;
-		if (!ph)continue;
-
-		for (unsigned int y_b = 0; y_b < mm.h_border.size() - 1; ++y_b)
-		{
-			int y = mm.h_border[y_b];
-
-			lb.maxg = max_grandient & 255;
-			lb.ming = -lb.maxg;
-
-			if (mm.fac.enable)
-			{
-				lb.clear();
-
-				unsigned char * _start_src = pick_pixel(src, start_x, y - 1);
-				unsigned char * start_src = pick_pixel(src, start_x, y);
-
-				for (int i = 0; i < ph; ++i)
-				{
-					lb.stat(start_src[ch], _start_src[ch]);
-					start_src += bpp;
-					_start_src += bpp;
-				}
-
-				lb.get_limite(mm.fac.ignore, mm.fac.relax);
-			}
-
-			unsigned char * _start_src = pick_pixel(src, start_x, y - 1);
-			unsigned char * start_src = pick_pixel(src, start_x, y);
-			Unit * start_dst = (Unit *)pick_pixel(dy, start_x, y);
-
-			for (int i = 0; i < ph; ++i)
-			{
-				int g = start_src[ch] - _start_src[ch];
-
-				g = std::min(g, lb.maxg);
-				g = std::max(g, lb.ming);
-
-				*start_dst = ZP::to_unit(g);
-
-				start_src += bpp;
-				_start_src += bpp;
-				++start_dst;
-			}
-		}
-	}
-}
 
 
 static void mask_to_byte(Image &maskbuf,PImage &mask,const PImage &_mask)
@@ -534,6 +148,39 @@ inline void validate_border(vector<unsigned int> &border, unsigned int bound)
 	}), border.end());
 }
 
+
+template<typename Unit,typename Dx, typename Dy>
+static void _poisson_stiching_inner(
+	const bear::PImage &dst,
+	const bear::PImage &src,
+	Dx && get_dx,
+	Dy && get_dy,
+	unsigned int format,
+	PStichingParam param)
+{
+	copy(dst, src);
+
+	Image dx(size(dst), 1, sizeof(Unit) << 3);
+	Image dy(size(dst), 1, sizeof(Unit) << 3);
+	Image ds(size(dst), 1, sizeof(Unit) << 3);
+
+	int chl[3];
+
+	chl[0] = FI_RED(format);
+	chl[1] = FI_GREEN(format);
+	chl[2] = FI_BLUE(format);
+
+	for (int i = 0; i < 3; ++i)
+	{
+		std::forward<Dx>(get_dx)(dx, chl[i]);
+		std::forward<Dy>(get_dy)(dy, chl[i]);
+
+		dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+
+		stiching<Unit>(dst, ds, chl[i]);
+	}
+}
+
 template<typename Unit>
 static void _poisson_stiching_merged(
 	const bear::PImage &dst,
@@ -564,35 +211,55 @@ static void _poisson_stiching_merged(
 		mm.h_border.push_back(height(src));
 	}
 
-
-	Image dx(size(dst), 1, sizeof(Unit) << 3);
-	Image dy(size(dst), 1, sizeof(Unit) << 3);
-	Image ds(size(dst), 1, sizeof(Unit) << 3);
-
-	int chl[3];
-
-	chl[0] = FI_RED(format);
-	chl[1] = FI_GREEN(format);
-	chl[2] = FI_BLUE(format);
-
-	for (int i = 0; i < 3; ++i)
+	_poisson_stiching_inner<Unit>(
+		dst, src,
+		[&](PImage dx, int ch)
 	{
 		if (mm.mask)
-		{
-			x_d<Unit>(dx, src, chl[i], mask, param.max_grandient);
-			y_d<Unit>(dy, src, chl[i], mask, param.max_grandient);
-		}
+			x_d<Unit>(dx, src, ch, mask, param.max_grandient);
 		else
-		{
-			x_d<Unit>(dx, src, chl[i], mm, param.max_grandient);
-			y_d<Unit>(dy, src, chl[i], mm, param.max_grandient);
-		}
+			x_d<Unit>(dx, src, ch, mm, param.max_grandient);
+	},
+		[&](PImage dy, int ch)
+	{
+		if (mm.mask)
+			y_d<Unit>(dy, src, ch, mask, param.max_grandient);
+		else
+			y_d<Unit>(dy, src, ch, mm, param.max_grandient);
+	},
+		format,
+		param
+	);
+}
 
 
-		dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+template<typename Unit>
+static void _poisson_stiching(
+	const bear::PImage &dst,
+	const vector<vector<PImage>> &src,
+	unsigned int format,
+	PStichingParam param)
+{
 
-		stiching<Unit>(dst, ds, chl[i]);
-	}
+	_poisson_stiching_inner(
+		dst, src,
+		[&](PImage dx, int ch)
+	{
+		if (mm.mask)
+			x_d<Unit>(dx, src, ch, mask, param.max_grandient);
+		else
+			x_d<Unit>(dx, src, ch, mm, param.max_grandient);
+	},
+		[&](PImage dy, int ch)
+	{
+		if (mm.mask)
+			y_d<Unit>(dy, src, ch, mask, param.max_grandient);
+		else
+			y_d<Unit>(dy, src, ch, mm, param.max_grandient);
+	},
+		format,
+		param
+		);
 }
 
 void poisson_stiching_merged(
@@ -636,4 +303,170 @@ void poisson_stiching(
 	mask_merg(src1, src1, src2, mask);
 
 	poisson_stiching_merged(dst, src1, mask, format, param);
+}
+
+
+template<typename C>
+static void for_each_img(const vector<vector<PImage>> &src,C && c)
+{
+	int nw = src[0].size();
+	int nh = src.size();
+
+	vector<int> bws;
+	vector<int> bhs;
+
+	int cpy = 0;
+	for (int y = 0; y < nh; ++y)
+	{
+		assert(src[y].size() == nw);
+
+		int rh = src[y][0].height;
+		int bh = rh;
+		int py = 0;
+
+		if (0 != y)
+		{
+			--bh;
+			++py;
+		}
+
+		if (nh - 1 != y) --bh;
+
+		bhs.push_back(bh);
+
+		int cpx = 0;
+		for (int x = 0; x < nw; ++x)
+		{
+			assert(src[y][x].height == rh);
+
+			int rw = src[y][x].width;
+			int bw = rw;
+			int px = 0;
+
+			if (0 != x)
+			{
+				--bw;
+				++px;
+			}
+
+			if (nw - 1 != x) --bw;
+
+			if (y)assert(bw == bws[x]);
+			else bws.push_back(bw);
+
+			forward<C>(c)(
+				src, x, y,
+				PSize(bw, bh),
+				PPoint(px, py),
+				PPoint(cpx, cpy));
+
+			cpx += bw;
+		}
+
+		cpy += bh;
+	}
+
+}
+
+template<typename Unit>
+static void _poisson_stiching_m(
+	const bear::PImage &dst,
+	const vector<vector<PImage>> &src,
+	unsigned int format,
+	PStichingParam param)
+{
+
+	_poisson_stiching_inner<Unit>(
+		dst, dst,
+		[&src, &param](PImage dx, int ch)
+	{
+		clear_d<Unit>(dx);
+		for_each_img(src, [&dx, ch, &param](
+			const vector<vector<PImage>> &src,
+			int x, int y,
+			PSize bs,
+			PPoint p,
+			PPoint cp
+			)
+		{
+			if (src[y].size() - 1 == x)return;
+
+			auto img1 = src[y][x];
+			auto img2 = src[y][x + 1];
+
+			img1 = clip_image(img1, img1.width - 2, p.y, 2, bs.height);
+			img2 = clip_image(img2, 0, p.y, 2, bs.height);
+
+			auto dst = clip_image(dx, cp.x + bs.width - 1, cp.y, 2, bs.height);
+
+			x_d_p<Unit>(dst, img1, img2, ch, param.max_grandient);
+
+		});
+	},
+		[&src, &param](PImage dy, int ch)
+	{
+		clear_d<Unit>(dy);
+		for_each_img(src, [&dy, ch, &param](
+			const vector<vector<PImage>> &src,
+			int x, int y,
+			PSize bs,
+			PPoint p,
+			PPoint cp
+			)
+		{
+			if (src.size() - 1 == y)return;
+
+			auto img1 = src[y][x];
+			auto img2 = src[y + 1][x];
+
+			img1 = clip_image(img1, p.x, img1.height - 2, bs.width, 2);
+			img2 = clip_image(img2, p.x, 0, bs.width, 2);
+
+			auto dst = clip_image(dy, cp.x, cp.y + bs.height - 1, bs.width, 2);
+
+			y_d_p<Unit>(dst, img1, img2, ch, param.max_grandient);
+		});
+	},
+		format,
+		param
+		);
+
+}
+
+
+void poisson_stiching(
+	const bear::PImage &dst,
+	const vector<vector<PImage>> &src,
+	unsigned int format,
+	PStichingParam param)
+{
+	assert(
+		n_channel(dst) == FI_BPP(format) &&
+		8 == depth(dst));
+
+	for_each_img(src, [&dst](
+		const vector<vector<PImage>> &src,
+		int x,int y,
+		PSize bs,
+		PPoint p,
+		PPoint cp
+		) 
+	{
+		auto img = src[y][x];
+
+		PImage s = clip_image(img, PRect(p, bs));
+
+		PImage d = clip_image(dst, PRect(cp, bs));
+
+		copy(d, s);
+	});
+
+	if (param.float_precision)
+	{
+		_poisson_stiching_m<float>(dst, src, format, param);
+	}
+	else
+	{
+		_poisson_stiching_m<unsigned short>(dst, src, format, param);
+	}
 }

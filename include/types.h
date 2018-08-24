@@ -44,10 +44,62 @@ namespace bear
 
 	struct PSize
 	{
+		PSize() = default;
 		PSize(unsigned int _width, unsigned int _height) :
 			width(_width), height(_height) {}
-		unsigned int width;
-		unsigned int height;
+
+		int width = 0;
+		int height = 0;
+
+		bool operator == (const PSize &oth) const
+		{
+			return width == oth.width && height == oth.height;
+		}
+	};
+
+
+	struct PPoint
+	{
+		PPoint() = default;
+		PPoint(int _x,int _y) :
+			x(_x), y(_y) {}
+		int x = 0;
+		int y = 0;
+
+		bool operator == (const PPoint &oth) const
+		{
+			return x == oth.x && y == oth.y;
+		}
+	};
+
+	struct PRect
+	{
+		PRect() = default;
+		PRect(int _x,int _y,unsigned int _width, unsigned int _height) :
+			x(_x),y(_y),
+			width(_width), height(_height) {}
+
+
+		PRect(PPoint pos,PSize size) :
+			x(pos.x), y(pos.y),
+			width(size.width), height(size.height) {}
+
+		int x = 0, y = 0, width = 0, height = 0;
+
+		PSize size() const
+		{
+			return PSize(width, height);
+		}
+
+		PPoint pos() const
+		{
+			return PPoint(x, y);
+		}
+
+		bool operator == (const PRect &oth) const
+		{
+			return size() == oth.size() && pos() == oth.pos();
+		}
 	};
 }
 

@@ -59,19 +59,19 @@ namespace bear
 		);
 	}
 
-	PImage clip_image(const PImage &img, int x_offset, int y_offset, int width, int height)
+	PImage clip_image(const PImage &img, PRect rect)
 	{
 		assert(
-			x_offset + width <= img.width ||
-			y_offset + height <= img.height
+			rect.x + rect.width <= img.width ||
+			rect.y + rect.height <= img.height
 		);
 
 		PImage ret;
-		ret.data = pick_pixel(img, x_offset, y_offset);
+		ret.data = pick_pixel(img, rect.x, rect.y);
 		ret.depth = img.depth;
 		ret.n_channel = img.n_channel;
-		ret.width = width;
-		ret.height = height;
+		ret.width = rect.width;
+		ret.height = rect.height;
 		ret.width_step = img.width_step;
 		return ret;
 	}
