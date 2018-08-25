@@ -407,7 +407,7 @@ static void _poisson_stiching_m(
 
 void poisson_stiching(
 	const bear::PImage &dst,
-	const vector<vector<PImage>> &src,
+	const PStichingVectorSrc &src,
 	unsigned int rd,
 	unsigned int format,
 	PStichingParam param)
@@ -416,7 +416,7 @@ void poisson_stiching(
 		n_channel(dst) == FI_BPP(format) &&
 		8 == depth(dst));
 
-	for_each_img(src, rd, [&dst](
+	for_each_img(src.src, rd, [&dst](
 		const vector<vector<PImage>> &src,
 		int x,int y,
 		PSize bs,
@@ -435,10 +435,10 @@ void poisson_stiching(
 
 	if (param.float_precision)
 	{
-		_poisson_stiching_m<float>(dst, src, rd, format, param);
+		_poisson_stiching_m<float>(dst, src.src, rd, format, param);
 	}
 	else
 	{
-		_poisson_stiching_m<unsigned short>(dst, src, rd, format, param);
+		_poisson_stiching_m<unsigned short>(dst, src.src, rd, format, param);
 	}
 }

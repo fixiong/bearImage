@@ -86,9 +86,28 @@ void poisson_stiching_merged(
 	PStichingParam param = PStichingParam());
 
 
+struct PStichingVectorSrc
+{
+	template<typename Src>
+	PStichingVectorSrc(Src &&_src)
+	{
+		src.resize(_src.size());
+		for (int y = 0; y < (int)_src.size(); ++y)
+		{
+			src[y].resize(_src[0].size());
+			for (int x = 0; x < (int)_src[y].size(); ++x)
+			{
+				src[y][x] = std::forward<Src>(_src)[y][x];
+			}
+		}
+	}
+
+	std::vector<std::vector<bear::PImage>> src;
+};
+
 void poisson_stiching(
 	const bear::PImage &dst,
-	const std::vector<std::vector<bear::PImage>> &src,
+	const PStichingVectorSrc &src,
 	unsigned int redundance,
 	unsigned int format,
 	PStichingParam param = PStichingParam());
