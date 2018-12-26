@@ -112,4 +112,14 @@ void poisson_stiching(
 	unsigned int format,
 	PStichingParam param = PStichingParam());
 
+
+void poisson_stiching_check(
+	std::vector<bear::PPoint> error_block,
+	std::vector<bear::PPoint> eliminate,
+	const PStichingVectorSrc &src,
+	unsigned int rd,
+	unsigned int format,
+	float th_cv,
+	float th_mse);
+
 #endif

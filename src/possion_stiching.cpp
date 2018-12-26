@@ -442,3 +442,190 @@ void poisson_stiching(
 		_poisson_stiching_m<unsigned short>(dst, src.src, rd, format, param);
 	}
 }
+
+
+static void covariance(float &cv, float &max_cv, float &mse, PImage img1, PImage img2, unsigned int format)
+{
+	int chl[] =
+	{
+		FI_RED(format),
+		FI_GREEN(format),
+		FI_BLUE(format),
+	};
+
+	int bpp = FI_BPP(format);
+
+	unsigned long long eab = 0;
+	unsigned long long eaa = 0;
+	unsigned long long ebb = 0;
+	unsigned long long ea = 0;
+	unsigned long long eb = 0;
+	unsigned long long eapb = 0;
+
+	for (int y = 0; y < img1.height; ++y)
+	{
+		unsigned char * r1 = scanline(img1, y);
+		unsigned char * r2 = scanline(img2, y);
+
+		for (int x = 0; x < img1.width; ++x)
+		{
+			for (int i = 0; i < 3; ++i)
+			{
+				unsigned int a = r1[chl[i]];
+				unsigned int b = r2[chl[i]];
+				eab += a * b;
+				eaa += a * a;
+				ebb += b * b;
+				ea += a;
+				eb += b;
+
+				int apb = a - b;
+
+				eapb += apb * apb;
+			}
+
+			r1 += bpp;
+			r2 += bpp;
+		}
+	}
+
+	unsigned long long cab = eab - ea * eb;
+	unsigned long long caa = eaa - ea * ea;
+	unsigned long long cbb = ebb - eb * eb;
+
+	float cad2 = (float)img1.width * (float)img1.width * (float)img1.height * (float)img1.height;
+
+	cad2 = 1.0f / cad2;
+
+	cv = (float)cab * cad2;
+	max_cv = sqrt((float)caa) * sqrt((float)cbb) * cad2;
+	mse = (float)eapb * cad2;
+}
+
+inline float error_tt(PImage img1, PImage img2, unsigned int format, float th_cv, float th_mse)
+{
+	float cv, max_cv, mse;
+
+	covariance(cv, max_cv, mse, img1, img2, format);
+
+	float fcv = atan((max_cv - cv) / th_cv) * (2.0f / 3.141593653f);
+
+	float fmse = atan(mse / th_mse) * (2.0f / 3.141593653f);
+
+	return std::max(fcv, fmse);
+}
+
+void poisson_stiching_check(
+	std::vector<bear::PPoint> error_block,
+	std::vector<bear::PPoint> eliminate,
+	const PStichingVectorSrc &src,
+	unsigned int rd,
+	unsigned int format,
+	float th_cv,
+	float th_mse)
+{
+	int bw = (int)src.src[0].size();
+	int bh = (int)src.src.size();
+
+	Image dx(PSize(bw - 1, bh), 1, 32);
+	Image dy(PSize(bw, bh - 1), 1, 32);
+
+	for_each_img(src.src, rd, [=, &dx, &dy](
+		const vector<vector<PImage>> &src,
+		int x, int y,
+		PSize bs,
+		PPoint p,
+		PPoint cp
+		)
+	{
+		if (bw - 1 != x)
+		{
+			auto img1 = src[y][x];
+			auto img2 = src[y][x + 1];
+
+			img1 = clip_image(img1, img1.width - rd * 2, p.y, rd * 2, bs.height);
+			img2 = clip_image(img2, 0, p.y, rd * 2, bs.height);
+
+			*(float *)pick_pixel(dx, x, y) = error_tt(img1, img2, format, th_cv, th_mse);
+		}
+
+		if (bh - 1 != y)
+		{
+			auto img1 = src[y][x];
+			auto img2 = src[y + 1][x];
+
+			img1 = clip_image(img1, p.x, img1.height - rd * 2, bs.width, rd * 2);
+			img2 = clip_image(img2, p.x, 0, bs.width, rd * 2);
+
+			*(float *)pick_pixel(dy, x, y) = error_tt(img1, img2, format, th_cv, th_mse);
+		}
+	});
+
+	enum
+	{
+		NORMAL_BLOCK,
+		ERROR_BLOCK,
+		ELIMINATE_BLOCK,
+	};
+
+	Image flag(PSize(bw, bh), 1, 32);
+
+	fill(flag, (unsigned int)NORMAL_BLOCK);
+
+	for (int i = 0; i < (int)eliminate.size(); ++i)
+	{
+		assert((unsigned int)eliminate[i].x < (unsigned int)bw && (unsigned int)eliminate[i].y < (unsigned int)bh);
+
+		*(unsigned int *)pick_pixel(flag, eliminate[i].x, eliminate[i].y) = ELIMINATE_BLOCK;
+	}
+
+	for(;;)
+	{
+		int mx = 0;
+		int my = 0;
+
+		float me = 0.0f;
+
+		for (int y = 0; y < bh; ++y)
+		{
+			for (int x = 0; x < bw; ++x)
+			{
+				if (NORMAL_BLOCK != *(unsigned int *)pick_pixel(flag, x, y))continue;
+
+				float ce = 0;
+
+				if (x > 0 && ERROR_BLOCK != *(unsigned int *)pick_pixel(flag, x - 1, y))
+				{
+					ce += *(float *)pick_pixel(dx, x - 1, y);
+				}
+
+				if (x < bw - 1 && ERROR_BLOCK != *(unsigned int *)pick_pixel(flag, x + 1, y))
+				{
+					ce += *(float *)pick_pixel(dx, x, y);
+				}
+
+				if (y > 0 && ERROR_BLOCK != *(unsigned int *)pick_pixel(flag, x, y - 1))
+				{
+					ce += *(float *)pick_pixel(dy, x, y - 1);
+				}
+
+				if (y < bh - 1 && ERROR_BLOCK != *(unsigned int *)pick_pixel(flag, x, y + 1))
+				{
+					ce += *(float *)pick_pixel(dy, x, y);
+				}
+
+				if (ce > me)
+				{
+					me = ce;
+					mx = x;
+					my = y;
+				}
+			}
+		}
+
+		if (me < 0.5f)break;
+
+		*(unsigned int *)pick_pixel(flag, mx, my) = ERROR_BLOCK;
+		error_block.push_back(PPoint(mx, my));
+	}
+}
