@@ -115,7 +115,7 @@ void poisson_stiching(
 
 void poisson_stiching_check(
 	std::vector<bear::PPoint> error_block,
-	std::vector<bear::PPoint> eliminate,
+	const std::vector<bear::PPoint> eliminate,
 	const PStichingVectorSrc &src,
 	unsigned int rd,
 	unsigned int format,

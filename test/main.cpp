@@ -1,9 +1,11 @@
-#include <opencv2/opencv.hpp>
+//#include <opencv2/opencv.hpp>
 #include <types.h>
 #include <image.h>
 #include <possion_stiching.h>
+#include <vector>
+#include <iostream>
 
-using namespace cv;
+//using namespace cv;
 using namespace std;
 using namespace bear;
 
@@ -13,45 +15,54 @@ int main(){
 
     printf("Main Entry\n");
 
-    int tileX=3,tileY=4;
+	int tileX = 3, tileY = 4;
+	int rd = 3;
 
-    int w=320;
-    int h=180;
-    Mat dst(Size(tileX*w,tileY*h),CV_8UC3,Scalar(0));
+	vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
+
     
-    Image msk(w * 3, h * 4, 1, 8);
-    for(int i=0;i<tileX;i++){
-        for(int j=0;j<tileY;j++){
+    for(int x=0;x<tileX;x++)
+	{
+        for(int y=0;y<tileY;y++)
+		{
             char path[128];
-            sprintf(path,"/Users/john/SandBox/done/12a06a1bb099fc8a770071471037a6a6.zip_t_%d_%d_res.png",i+1,j);
-            Mat src=imread(path);
-
-            imshow("src",src);
-            waitKey(200);
-            
-            PImage dm = clip_image(dst, i * w, (3 - j) * h, w, h);
-            PImage sm = src;
-            copy(dm, sm);
-
-            PImage ms = clip_image(msk, i * w, (3 - j) * h, w, h);
-
-            if ((i + j * 3) & 1)
-            {
-                zero(ms);
-            }
-            else
-            {
-                fill(ms, 0, (unsigned char)255);
-            }
+            sprintf(path,"/Users/john/SandBox/done/12a06a1bb099fc8a770071471037a6a6.zip_t_%d_%d_res.png",x,y);
+            src[y][x]=imread(path);
             
         }
     }
+	int tw = rd * 2;
+	int th = rd * 2;
 
-    imshow("msk",to_cv_mat(msk));
-    poisson_stiching_merged(dst, dst, msk, F_BGR, 5);
+	for (int x = 0; x<tileX; x++)
+	{
+		tw += src[0][x].width - rd * 2;
+	}
+
+	for (int y = 0; y<tileY; y++)
+	{
+		tw += src[y][0].height - rd * 2;
+	}
+
+    Mat dst(Size(tw,th),CV_8UC3,Scalar(0));
+
+	PStichingParam param;
+	param.iteration_time = 100;
+
+	poisson_stiching(dst, src, rd, F_BGR, 5, param);
+
+	vector<PPoint> error;
+
+	poisson_stiching_check(error, vector<PPoint>(), src, rd, F_BGR, 8, 30);
+
+	for (int i = 0; i < (int)error.size(); ++i)
+	{
+		cout << "error block: (" << error[i].x << "," << error[i].y << ")" << endl;
+	}
 
     imshow("dst",dst);
     waitKey();
+
 
 
     return 0;

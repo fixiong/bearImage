@@ -489,7 +489,7 @@ static void covariance(float &cv, float &max_cv, float &mse, PImage img1, PImage
 		}
 	}
 
-	unsigned long long cab = eab - ea * eb;
+	long long cab = eab - ea * eb;
 	unsigned long long caa = eaa - ea * ea;
 	unsigned long long cbb = ebb - eb * eb;
 
@@ -517,13 +517,16 @@ inline float error_tt(PImage img1, PImage img2, unsigned int format, float th_cv
 
 void poisson_stiching_check(
 	std::vector<bear::PPoint> error_block,
-	std::vector<bear::PPoint> eliminate,
+	const std::vector<bear::PPoint> eliminate,
 	const PStichingVectorSrc &src,
 	unsigned int rd,
 	unsigned int format,
 	float th_cv,
 	float th_mse)
 {
+	th_cv = th_cv * th_cv;
+	th_mse = th_mse * th_mse;
+
 	int bw = (int)src.src[0].size();
 	int bh = (int)src.src.size();
 
