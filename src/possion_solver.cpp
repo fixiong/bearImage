@@ -2,6 +2,8 @@
 #include "utility.hpp"
 #include "filter_convolution.hpp"
 
+#include "../../bear/include/ptr_algorism.h"
+
 #include <assert.h>
 #include <cmath>
 #include <algorithm>
@@ -46,12 +48,12 @@ struct UpKernel
 };
 
 template<typename Unit>
-static void set_zero_sign(const PImage &img)
+static void set_zero_sign(const image_ptr<Unit,1> &img)
 {
-	for (int y = 0; y<img.height; ++y)
+	for (size_t y = 0; y<img.height(); ++y)
 	{
-		Unit * row = (Unit *)scanline(img, y);
-		for (int x = 0; x<img.width; ++x)
+		auto row = img[y];
+		for (size_t x = 0; x<img.width(); ++x)
 		{
 			row[x] = _ZERO_UNIT<Unit>::run();
 		}
@@ -66,38 +68,38 @@ template<>
 struct Iteration<unsigned short>
 {
 	static void run(
-		const PImage &dst,
-		const PImage &dx,
-		const PImage &dy,
+		const image_ptr<unsigned short, 1> &dst,
+		const image_ptr<unsigned short, 1> &dx,
+		const image_ptr<unsigned short, 1> &dy,
 		int iteration_time);
 };
 
 void Iteration<unsigned short>::run(
-	const PImage &dst,
-	const PImage &dx,
-	const PImage &dy,
+	const image_ptr<unsigned short, 1> &dst,
+	const image_ptr<unsigned short, 1> &dx,
+	const image_ptr<unsigned short, 1> &dy,
 	int iteration_time)
 {
 	for (int k = 0; k<iteration_time; ++k)
 	{
 		int y_flag = k & 1;
 
-		for (int y = 0; y<dst.height; ++y)
+		for (size_t y = 0; y<dst.height(); ++y)
 		{
 			int x_flag = (y + y_flag) & 1;
 
-			unsigned short * xrow1 = (unsigned short *)scanline(dx, y - 1);
-			unsigned short * xrow2 = (unsigned short *)scanline(dx, y);
-			unsigned short * xrow3 = (unsigned short *)scanline(dx, y + 1);
+			auto xrow1 = dx[y - 1];
+			auto xrow2 = dx[y];
+			auto xrow3 = dx[y + 1];
 
-			unsigned short * yrow1 = (unsigned short *)scanline(dy, y - 1);
-			unsigned short * yrow2 = (unsigned short *)scanline(dy, y);
-			unsigned short * yrow3 = (unsigned short *)scanline(dy, y + 1);
+			auto yrow1 = dy[y - 1];
+			auto yrow2 = dy[y];
+			auto yrow3 = dy[y + 1];
 
 
-			unsigned short * drow1 = (unsigned short *)scanline(dst, y - 1);
-			unsigned short * drow2 = (unsigned short *)scanline(dst, y);
-			unsigned short * drow3 = (unsigned short *)scanline(dst, y + 1);
+			auto drow1 = dst[y - 1];
+			auto drow2 = dst[y];
+			auto drow3 = dst[y + 1];
 
 			if (0 == y)
 			{
@@ -112,7 +114,7 @@ void Iteration<unsigned short>::run(
 
 					x += 2;
 				}
-				int mx = dst.width - 1;
+				int mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = limiteU16((int)(
@@ -128,7 +130,7 @@ void Iteration<unsigned short>::run(
 						) >> 1);
 				}
 			}
-			else if(dst.height - 1 == y)
+			else if(dst.height() - 1 == y)
 			{
 				int x = x_flag;
 
@@ -141,7 +143,7 @@ void Iteration<unsigned short>::run(
 
 					x += 2;
 				}
-				int mx = dst.width - 1;
+				int mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = limiteU16((int)(
@@ -170,7 +172,7 @@ void Iteration<unsigned short>::run(
 
 					x += 2;
 				}
-				int mx = dst.width - 1;
+				int mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = limiteU16((int)(
@@ -195,32 +197,32 @@ template<>
 struct Iteration<float>
 {
 	static void run(
-		const PImage &dst,
-		const PImage &dx,
-		const PImage &dy,
+		const image_ptr<float,1> &dst,
+		const image_ptr<float, 1> &dx,
+		const image_ptr<float, 1> &dy,
 		int iteration_time);
 };
 
 void Iteration<float>::run(
-	const PImage &dst,
-	const PImage &dx,
-	const PImage &dy,
+	const image_ptr<float, 1> &dst,
+	const image_ptr<float, 1> &dx,
+	const image_ptr<float, 1> &dy,
 	int iteration_time)
 {
-	PImage lp = dx;
+	image_ptr<float, 1> lp = dx;
 
-	for (int y = 0; y<dst.height; ++y)
+	for (size_t y = 0; y<dst.height(); ++y)
 	{
-		float * xrow = (float *)scanline(dx, y);
+		auto xrow = dx[y];
 
-		float * yrow1 = (float *)scanline(dy, y);
-		float * yrow2 = (float *)scanline(dy, y + 1);
+		auto yrow1 = dy[y];
+		auto yrow2 = dy[y + 1];
 
-		float * drow = (float *)scanline(lp, y);
+		auto drow = lp[y];
 
-		if (y == dst.height - 1)
+		if (y == dst.height() - 1)
 		{
-			int mx = dst.width - 1;
+			int mx = dst.width() - 1;
 			for (int x = 0; x<mx; ++x)
 			{
 				drow[x] = xrow[x] - xrow[x + 1] + yrow1[x];
@@ -229,7 +231,7 @@ void Iteration<float>::run(
 		}
 		else
 		{
-			int mx = dst.width - 1;
+			int mx = dst.width() - 1;
 			for (int x = 0; x<mx; ++x)
 			{
 				drow[x] = xrow[x] - xrow[x + 1] + yrow1[x] - yrow2[x];
@@ -243,15 +245,15 @@ void Iteration<float>::run(
 	{
 		int y_flag = k & 1;
 
-		for (int y = 0; y<dst.height; ++y)
+		for (size_t y = 0; y<dst.height(); ++y)
 		{
 			int x_flag = (y + y_flag) & 1;
 
-			float * lprow = (float *)scanline(lp, y);
+			auto lprow = lp[y];
 
-			float * drow1 = (float *)scanline(dst, y - 1);
-			float * drow2 = (float *)scanline(dst, y);
-			float * drow3 = (float *)scanline(dst, y + 1);
+			auto drow1 = dst[y];
+			auto drow2 = dst[y];
+			auto drow3 = dst[y];
 
 			if (0 == y)
 			{
@@ -263,7 +265,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				int mx = dst.width - 1;
+				int mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
@@ -274,7 +276,7 @@ void Iteration<float>::run(
 					drow2[x] = (lprow[x] + drow2[x - 1] + drow3[x]) * 0.5f;
 				}
 			}
-			else if (dst.height - 1 == y)
+			else if (dst.height() - 1 == y)
 			{
 				int x = x_flag;
 
@@ -284,7 +286,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				int mx = dst.width - 1;
+				int mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
@@ -306,7 +308,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				int mx = dst.width - 1;
+				int mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
@@ -324,9 +326,9 @@ void Iteration<float>::run(
 
 template<typename Unit>
 static void scale_recursion(
-	const PImage & dst,
-	const PImage &dx,
-	const PImage &dy,
+	const image_ptr<Unit, 1> & dst,
+	const image_ptr<Unit, 1> &dx,
+	const image_ptr<Unit, 1> &dy,
 	int iteration_time, unsigned int n_layer)
 {
 	if (!n_layer)
@@ -335,11 +337,11 @@ static void scale_recursion(
 		return;
 	}
 
-	PSize subsz = size_down<5>(dst.size());
+	auto subsz = size_down<5>(dst.size());
 
-	Image sub_dx(subsz, 1, sizeof(Unit) << 3);
-	Image sub_dy(subsz, 1, sizeof(Unit) << 3);
-	Image sub_dst(subsz, 1, sizeof(Unit) << 3);
+	image<Unit, 1> sub_dx(subsz, 1);
+	image<Unit, 1> sub_dy(subsz, 1);
+	image<Unit, 1> sub_dst(subsz, 1);
 
 	DownFilter<DownKernel>::template run_dx<Unit>(sub_dx, dx);
 	DownFilter<DownKernel>::template run_dy<Unit>(sub_dy, dy);
@@ -352,18 +354,19 @@ static void scale_recursion(
 	Iteration<Unit>::run(dst, dx, dy, iteration_time);
 }
 
-void dxy_poisson_solver(
-	const bear::PImage &_dst,
-	const bear::PImage &dx,
-	const bear::PImage &dy,
+template<typename Unit>
+void dxy_poisson_solver_inner(
+	const image_ptr<Unit,1> &_dst,
+	const image_ptr<Unit, 1> &dx,
+	const image_ptr<Unit, 1> &dy,
 	unsigned int iteration_time,
 	int base_level)
 {
-	Image dbuf;
-	PImage dst;
-	if (scanline(dst, 0) == scanline(dx, 0) || scanline(dst, 0) == scanline(dy, 0))
+	image<Unit,1> dbuf;
+	image_ptr<Unit,1> dst;
+	if (dst[0].data() == dx[0].data() || dst[0].data() == dy[0].data())
 	{
-		dbuf.construct(_dst.size(), 1, 16);
+		dbuf = image<Unit, 1>(size(_dst));
 		dst = dbuf;
 	}
 	else
@@ -371,7 +374,7 @@ void dxy_poisson_solver(
 		dst = _dst;
 	}
 
-	float os = sqrt((float)dst.width * dst.width + dst.height * dst.height);
+	float os = sqrt((float)dst.width() * dst.width() + dst.height() * dst.height());
 
 
 	int level = 0;
@@ -386,18 +389,36 @@ void dxy_poisson_solver(
 
 	level = std::max(1, level);
 
-	if (dst.depth == 16 && dx.depth == 16 && dy.depth == 16)
+	scale_recursion(dst, dx, dy, iteration_time, level);
+
+	if (dbuf.size())copy(_dst, dst);
+}
+
+void dxy_poisson_solver(
+	const dynamic_image_ptr &dst,
+	const dynamic_image_ptr &dx,
+	const dynamic_image_ptr &dy,
+	unsigned int iteration_time,
+	int base_level)
+{
+	if (dst.elm_size() == 16 && dx.elm_size() == 16 && dy.elm_size() == 16)
 	{
-		scale_recursion<unsigned short>(dst, dx, dy, iteration_time, level);
+		dxy_poisson_solver_inner(
+			image_ptr<unsigned short,1>(dst),
+			image_ptr<unsigned short, 1>(dx),
+			image_ptr<unsigned short, 1>(dy),
+			iteration_time, base_level);
 	}
-	else if (dst.depth == 32 && dx.depth == 32 && dy.depth == 32)
+	else if (dst.elm_size() == 32 && dx.elm_size() == 32 && dy.elm_size() == 32)
 	{
-		scale_recursion<float>(dst, dx, dy, iteration_time, level);
+		dxy_poisson_solver_inner(
+			image_ptr<float, 1>(dst),
+			image_ptr<float, 1>(dx),
+			image_ptr<float, 1>(dy),
+			iteration_time, base_level);
 	}
 	else
 	{
-		assert(false);
+		throw bear_exception(exception_type::other_error, "unsuported image type!");
 	}
-
-	if (dbuf)copy(_dst, dst);
 }

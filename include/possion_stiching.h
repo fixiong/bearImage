@@ -1,7 +1,6 @@
 #ifndef _POSSION_STICHING_H
 #define _POSSION_STICHING_H
 
-#include "image.h"
 #include <vector>
 #include <algorithm>
 
