@@ -1,6 +1,6 @@
-#include "possion_solver.h"
-#include "utility.hpp"
-#include "filter_convolution.hpp"
+#include "../include/possion_solver.h"
+#include "../include/utility.hpp"
+#include "../include/filter_convolution.hpp"
 
 #include "../../bear/include/ptr_algorism.h"
 
@@ -100,7 +100,7 @@ void Iteration<unsigned short>::run(
 
 					x += 2;
 				}
-				int mx = dst.width() - 1;
+				size_t mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = limiteU16((int)(
@@ -129,7 +129,7 @@ void Iteration<unsigned short>::run(
 
 					x += 2;
 				}
-				int mx = dst.width() - 1;
+				size_t mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = limiteU16((int)(
@@ -158,7 +158,7 @@ void Iteration<unsigned short>::run(
 
 					x += 2;
 				}
-				int mx = dst.width() - 1;
+				size_t mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = limiteU16((int)(
@@ -208,7 +208,7 @@ void Iteration<float>::run(
 
 		if (y == dst.height() - 1)
 		{
-			int mx = dst.width() - 1;
+			size_t mx = dst.width() - 1;
 			for (int x = 0; x<mx; ++x)
 			{
 				drow[x] = xrow[x] - xrow[x + 1] + yrow1[x];
@@ -217,7 +217,7 @@ void Iteration<float>::run(
 		}
 		else
 		{
-			int mx = dst.width() - 1;
+			size_t mx = dst.width() - 1;
 			for (int x = 0; x<mx; ++x)
 			{
 				drow[x] = xrow[x] - xrow[x + 1] + yrow1[x] - yrow2[x];
@@ -251,7 +251,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				int mx = dst.width() - 1;
+				size_t mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
@@ -272,7 +272,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				int mx = dst.width() - 1;
+				size_t mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
@@ -294,7 +294,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				int mx = dst.width() - 1;
+				size_t mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
@@ -329,13 +329,13 @@ static void scale_recursion(
 	image<Unit, 1> sub_dy(subsz, 1);
 	image<Unit, 1> sub_dst(subsz, 1);
 
-	DownFilter<DownKernel>::template run_dx<Unit>(sub_dx, dx);
-	DownFilter<DownKernel>::template run_dy<Unit>(sub_dy, dy);
+	DownFilter<DownKernel>::run_dx(to_ptr(sub_dx), dx);
+	DownFilter<DownKernel>::run_dy(to_ptr(sub_dy), dy);
 
 
 	scale_recursion<Unit>(sub_dst, sub_dx,sub_dy, iteration_time, n_layer - 1);
 
-	UpFilter<UpKernel>::template run<Unit>(dst,sub_dst);
+	UpFilter<UpKernel>::run(dst,to_ptr(sub_dst));
 
 	Iteration<Unit>::run(dst, dx, dy, iteration_time);
 }
@@ -381,9 +381,9 @@ void dxy_poisson_solver_inner(
 }
 
 void dxy_poisson_solver(
-	const dynamic_image_ptr &dst,
-	const dynamic_image_ptr &dx,
-	const dynamic_image_ptr &dy,
+	dynamic_image_ptr dst,
+	dynamic_image_ptr dx,
+	dynamic_image_ptr dy,
 	unsigned int iteration_time,
 	int base_level)
 {

@@ -11,7 +11,7 @@ using namespace bear;
 
 
 template<int Size>
-inline int size_down(int os)
+inline size_t size_down(size_t os)
 {
 	return (os + Size + 1)/2;
 }
@@ -177,17 +177,19 @@ inline void upf5(
 template<typename K>
 struct _UpFilter<5, K>
 {
-	template<typename Unit, typename C = Dfc>
-	static void run(image_ptr<Unit,1> dst, image_ptr<Unit, 1> src, C &&c = Dfc())
+	template<typename Image, typename C = Dfc>
+	static void run(Image dst, Image src, C &&c = Dfc())
 	{
+		using Unit = typename Image::elm_type;
+
 		array_ptr<Unit> srow1, srow2, srow3;
-		int dw = dst.width();
+		size_t dw = dst.width();
 		array_ptr<Unit> drow1;
 
 		std::vector<Unit> ct;
 		for (size_t y = 0; y<dst.height(); ++y)
 		{
-			int sy = y >> 1;
+			size_t sy = y >> 1;
 			srow1 = src[sy];
 			srow2 = src[sy + 1];
 			srow3 = src[sy + 2];
@@ -282,14 +284,16 @@ struct _ZERO_UNIT<unsigned short>
 };
 
 
-template<typename _K, typename Unit>
-void down_line_dx(array_ptr<Unit> dst,array_ptr<Unit> src)
+template<typename _K, typename Line>
+void down_line_dx(Line dst,Line src)
 {
+	using Unit = typename Line::elm_type;
+
 	typedef DDKernel<_K::Size,_K> K;
 	typedef _ZERO_UNIT<Unit> zu;
 
-	int sw = src.size();
-	int dw = size_down<_K::Size>(sw);
+	auto sw = src.size();
+	auto dw = size_down<_K::Size>(sw);
 
 	std::array<Unit,K::Size> tmp;
 
@@ -314,15 +318,15 @@ void down_line_dx(array_ptr<Unit> dst,array_ptr<Unit> src)
 		s += 2;
 	}
 
-	int mi = sw >> 1;
+	auto mi = sw >> 1;
 
-	for (int i = lm; i<mi; ++i)
+	for (auto i = lm; i<mi; ++i)
 	{
 		dst[i] = zu::to_zero(KernelADP<K::Size, K>::run_hz(src.clip(s,src.size())));
 		s += 2;
 	}
 
-	for (int i = mi; i<dw; ++i)
+	for (auto i = mi; i<dw; ++i)
 	{
 		for (int j = 0; j<K::Size; ++j)
 		{
@@ -340,11 +344,13 @@ void down_line_dx(array_ptr<Unit> dst,array_ptr<Unit> src)
 	}
 }
 
-template<typename K, typename Unit>
-void down_line(array_ptr<Unit> dst, array_ptr<Unit> src)
+template<typename K, typename Line>
+void down_line(Line dst, Line src)
 {
-	int sw = src.size();
-	int dw = size_down<K::Size>(sw);
+	using Unit = typename Line::elm_type;
+
+	auto sw = src.size();
+	auto dw = size_down<K::Size>(sw);
 
 	std::array<Unit,K::Size> tmp;
 
@@ -369,15 +375,15 @@ void down_line(array_ptr<Unit> dst, array_ptr<Unit> src)
 		s += 2;
 	}
 
-	int mi = sw >> 1;
+	auto mi = sw >> 1;
 
-	for (int i = lm; i<mi; ++i)
+	for (auto i = lm; i<mi; ++i)
 	{
 		dst[i] = KernelADP<K::Size, K>::run_hz(src.clip(s,src.size()));
 		s += 2;
 	}
 
-	for (int i = mi; i<dw; ++i)
+	for (auto i = mi; i<dw; ++i)
 	{
 		for (int j = 0; j<K::Size; ++j)
 		{
@@ -395,8 +401,8 @@ void down_line(array_ptr<Unit> dst, array_ptr<Unit> src)
 	}
 }
 
-template<int Size, typename Unit>
-inline void roll_buf(array_ptr<Unit> buf[])
+template<int Size, typename Line>
+inline void roll_buf(Line buf[])
 {
 	auto tmp1 = buf[0];
 	auto tmp2 = buf[1];
@@ -413,10 +419,10 @@ inline void roll_buf(array_ptr<Unit> buf[])
 template<bool D,typename K>
 struct _DOWN_LINE
 {
-	template<typename Unit>
-	static void run(array_ptr<Unit> dst, array_ptr<Unit> src)
+	template<typename Line>
+	static void run(Line dst, Line src)
 	{
-		down_line<K,Unit>(dst, src);
+		down_line<K>(dst, src);
 	}
 };
 
@@ -424,19 +430,21 @@ struct _DOWN_LINE
 template<typename K>
 struct _DOWN_LINE<true,K>
 {
-	template<typename Unit>
-	static void run(array_ptr<Unit> dst, array_ptr<Unit> src)
+	template<typename Line>
+	static void run(Line dst, Line src)
 	{
-		down_line_dx<K,Unit>(dst, src);
+		down_line_dx<K>(dst, src);
 	}
 };
 
 template<int Size, typename K>
 struct _DownFilter
 {
-	template<bool D, typename Unit, typename C = Dfc>
-	static void _run(image_ptr<Unit,1> dst, image_ptr<Unit,1> src, C &&c = Dfc())
+	template<bool D, typename Image, typename C = Dfc>
+	static void _run(Image dst, Image src, C &&c = Dfc())
 	{
+		using Unit = typename Image::elm_type;
+
 		typedef _DOWN_LINE<D,K> DL;
 
 
@@ -449,10 +457,10 @@ struct _DownFilter
 
 		for (int j = 0; j<Size - 2; ++j)
 		{
-			DL::run<Unit>(buf[j], src[0]);
+			DL::run(buf[j], src[0]);
 		}
 
-		int sh = src.height();
+		size_t sh = src.height();
 
 		int s = - 1;
 
@@ -464,20 +472,20 @@ struct _DownFilter
 			{
 				if (s < 0)
 				{
-					DL::run<Unit>(buf[j], src[0]);
+					DL::run(buf[j], src[0]);
 				}
 				else if (s >= sh)
 				{
-					DL::run<Unit>(buf[j], src[sh - 1]);
+					DL::run(buf[j], src[sh - 1]);
 				}
 				else
 				{
-					DL::run<Unit>(buf[j], src[s]);
+					DL::run(buf[j], src[s]);
 				}
 				++s;
 			}
 
-			int dw = dst.width();
+			size_t dw = dst.width();
 			auto drow = dst[i];
 
 			for (int j = 0; j<dw; ++j)
@@ -489,21 +497,23 @@ struct _DownFilter
 		}
 	}
 
-	template<typename Unit, typename C = Dfc>
-	static void run(image_ptr<Unit,1> dst, image_ptr<Unit, 1> src, C &&c = Dfc())
+	template<typename Image, typename C = Dfc>
+	static void run(Image dst, Image src, C &&c = Dfc())
 	{
-		_run<false,Unit>(dst, src, c);
+		_run<false>(dst, src, c);
 	}
 
-	template<typename Unit, typename C = Dfc>
-	static void run_dx(image_ptr<Unit, 1>  dst, image_ptr<Unit, 1> src, C &&c = Dfc())
+	template<typename Image, typename C = Dfc>
+	static void run_dx(Image dst, Image src, C &&c = Dfc())
 	{
-		_run<true, Unit>(dst, src, c);
+		_run<true>(dst, src, c);
 	}
 
-	template<typename Unit, typename C = Dfc>
-	static void run_dy(image_ptr<Unit, 1> dst, image_ptr<Unit, 1> src, C &&c = Dfc())
+	template<typename Image, typename C = Dfc>
+	static void run_dy(Image dst, Image src, C &&c = Dfc())
 	{
+		using Unit = typename Image::elm_type;
+
 		typedef _DOWN_LINE<false, K> DL;
 
 		typedef DDKernel<K::Size, K> _K;
@@ -521,7 +531,7 @@ struct _DownFilter
 			buf[j].fill(_ZERO_UNIT<Unit>::run());
 		}
 
-		int sh = src.height();
+		size_t sh = src.height();
 
 		int s = -1;
 
@@ -541,12 +551,12 @@ struct _DownFilter
 				}
 				else
 				{
-					DL::run<Unit>(buf[j], src[s]);
+					DL::run(buf[j], src[s]);
 				}
 				++s;
 			}
 
-			int dw = dst.width();
+			size_t dw = dst.width();
 			auto drow = dst[i];
 
 			for (int j = 0; j<dw; ++j)

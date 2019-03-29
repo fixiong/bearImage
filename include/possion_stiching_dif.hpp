@@ -100,10 +100,10 @@ struct _ZERO_PS<unsigned short>
 };
 
 
-template<typename DstUnit, typename SrcUnit, typename ZP>
+template<typename Dst, typename Src, typename ZP>
 static void x_d(
-	image_ptr<DstUnit,1> dx,
-	tensor_ptr<SrcUnit,3> src,
+	Dst dx,
+	Src src,
 	unsigned int ch,
 	image_ptr<unsigned char,1> mask,
 	ZP && zp)
@@ -123,16 +123,16 @@ static void x_d(
 
 			if (f1 != f2)
 			{
-				drow[x] = zp.from_unit(srow[x - 1][ch], srow[x][ch]);
+				drow[x] = std::forward<ZP>(zp).from_unit(srow[x - 1][ch], srow[x][ch]);
 			}
 		}
 	}
 }
 
-template<typename DstUnit, typename SrcUnit, typename ZP>
+template<typename Dst, typename Src, typename ZP>
 static void y_d(
-	image_ptr<DstUnit, 1> &dy,
-	tensor_ptr<SrcUnit, 3> &src,
+	Dst dy,
+	Src src,
 	unsigned int ch,
 	image_ptr<unsigned char, 1> mask,
 	ZP && zp)
@@ -155,17 +155,17 @@ static void y_d(
 
 			if (f1 != f2)
 			{
-				drow[x] = zp.from_unit(srow_[x],srow[x]);
+				drow[x] = std::forward<ZP>(zp).from_unit(srow_[x],srow[x]);
 			}
 		}
 	}
 }
 
-template<typename DstUnit, typename SrcUnit, typename ZP>
+template<typename Dst, typename Src, typename ZP>
 static void x_d_p(
-	image_ptr<DstUnit,1> dx,
-	tensor_ptr<SrcUnit, 3> src1,
-	tensor_ptr<SrcUnit, 3> src2,
+	Dst dx,
+	Src src1,
+	Src src2,
 	unsigned int ch,
 	ZP && zp)
 {
@@ -177,18 +177,18 @@ static void x_d_p(
 		double t = 0.0;
 		for (size_t x = 0; x < dx.width(); ++x)
 		{
-			t += zp.from_unit(src1[y][x][ch], src2[y][x][ch]);
+			t += std::forward<ZP>(zp).from_unit(src1[y][x][ch], src2[y][x][ch]);
 		}
 
-		dx[y][rd] = (DstUnit)floor(t * bs + 0.5);
+		dx[y][rd] = (typename Dst::elem_type)floor(t * bs + 0.5);
 	}
 }
 
-template<typename DstUnit, typename SrcUnit, typename ZP>
+template<typename Dst, typename Src, typename ZP>
 static void y_d_p(
-	image_ptr<DstUnit,1> dy,
-	tensor_ptr<SrcUnit, 3> src1,
-	tensor_ptr<SrcUnit, 3> src2,
+	Dst dy,
+	Src src1,
+	Src src2,
 	unsigned int ch,
 	ZP && zp)
 {
@@ -200,10 +200,10 @@ static void y_d_p(
 		double t = 0.0;
 		for (size_t y = 0; y < dy.height(); ++y)
 		{
-			t += zp.from_unit(src1[y][x][ch], src2[y][x][ch]);
+			t += std::forward<ZP>(zp).from_unit(src1[y][x][ch], src2[y][x][ch]);
 		}
 
-		dx[rd][x] = (DstUnit)floor(t * bs + 0.5);
+		dx[rd][x] = (typename Dst::elem_type)floor(t * bs + 0.5);
 	}
 }
 

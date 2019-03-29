@@ -17,73 +17,21 @@ struct PStichingParam
 
 };
 
-
-struct MakeMask
-{
-	struct AutoLimite
-	{
-		AutoLimite(float _ignore = 0.2f, float _relax = 1.1f) :
-			enable(true), ignore(_ignore), relax(_relax) {}
-
-		bool enable;
-		float ignore;
-		float relax;
-
-		static AutoLimite make_default()
-		{
-			AutoLimite ret;
-			ret.enable = false;
-			return ret;
-		}
-	};
-
-	MakeMask(const bear::const_dynamic_image_ptr &_mask) :mask(_mask) {}
-
-	template<typename Cnt>
-	MakeMask(
-		const Cnt &_w_border,
-		const Cnt &_h_border,
-		const AutoLimite &param = AutoLimite::make_default())
-	{
-		std::for_each(
-			_w_border.begin(),
-			_w_border.end(), 
-			[&](typename Cnt::value_type v) 
-		{
-			w_border.push_back((unsigned int)v);
-		});
-
-		std::for_each(
-			_h_border.begin(),
-			_h_border.end(),
-			[&](typename Cnt::value_type v)
-		{
-			h_border.push_back((unsigned int)v);
-		});
-
-		fac = param;
-	}
-
-	bear::const_dynamic_image_ptr mask;
-	std::vector<unsigned int> w_border, h_border;
-	AutoLimite fac;
-};
+void poisson_stiching_merged(
+	bear::dynamic_image_ptr dst,
+	bear::const_dynamic_image_ptr src,
+	bear::const_dynamic_image_ptr mask,
+	unsigned int format,
+	PStichingParam param);
 
 
 void poisson_stiching(
-	const bear::dynamic_image_ptr &dst,
-	const bear::const_dynamic_image_ptr &src1,
-	const bear::const_dynamic_image_ptr &src2,
-	const bear::const_dynamic_image_ptr &mask,
+	bear::dynamic_image_ptr dst,
+	bear::const_dynamic_image_ptr src1,
+	bear::const_dynamic_image_ptr src2,
+	bear::const_dynamic_image_ptr mask,
 	unsigned int format,
-	PStichingParam param = PStichingParam());
-
-void poisson_stiching_merged(
-	const bear::dynamic_image_ptr &dst,
-	const bear::const_dynamic_image_ptr &src,
-	MakeMask &&mask,
-	unsigned int format,
-	PStichingParam param = PStichingParam());
+	PStichingParam param);
 
 
 struct PStichingVectorSrc
