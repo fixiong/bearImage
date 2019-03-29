@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <algorithm>
+#include "../../bear/include/dynamic_image.h"
 
 struct PStichingParam
 {
@@ -36,7 +37,7 @@ struct MakeMask
 		}
 	};
 
-	MakeMask(const bear::PImage &_mask) :mask(_mask) {}
+	MakeMask(const bear::const_dynamic_image_ptr &_mask) :mask(_mask) {}
 
 	template<typename Cnt>
 	MakeMask(
@@ -63,23 +64,23 @@ struct MakeMask
 		fac = param;
 	}
 
-	bear::PImage mask;
+	bear::const_dynamic_image_ptr mask;
 	std::vector<unsigned int> w_border, h_border;
 	AutoLimite fac;
 };
 
 
 void poisson_stiching(
-	const bear::PImage &dst,
-	const bear::PImage &src1,
-	const bear::PImage &src2,
-	const bear::PImage &mask,
+	const bear::dynamic_image_ptr &dst,
+	const bear::const_dynamic_image_ptr &src1,
+	const bear::const_dynamic_image_ptr &src2,
+	const bear::const_dynamic_image_ptr &mask,
 	unsigned int format,
 	PStichingParam param = PStichingParam());
 
 void poisson_stiching_merged(
-	const bear::PImage &dst,
-	const bear::PImage &src,
+	const bear::dynamic_image_ptr &dst,
+	const bear::const_dynamic_image_ptr &src,
 	MakeMask &&mask,
 	unsigned int format,
 	PStichingParam param = PStichingParam());
@@ -101,11 +102,11 @@ struct PStichingVectorSrc
 		}
 	}
 
-	std::vector<std::vector<bear::PImage>> src;
+	std::vector<std::vector<bear::const_dynamic_image_ptr>> src;
 };
 
 void poisson_stiching(
-	const bear::PImage &dst,
+	const bear::dynamic_image_ptr &dst,
 	const PStichingVectorSrc &src,
 	unsigned int redundance,
 	unsigned int format,
@@ -113,8 +114,8 @@ void poisson_stiching(
 
 
 void poisson_stiching_check(
-	std::vector<bear::PPoint> error_block,
-	const std::vector<bear::PPoint> eliminate,
+	std::vector<bear::image_point> error_block,
+	const std::vector<bear::image_point> eliminate,
 	const PStichingVectorSrc &src,
 	unsigned int rd,
 	unsigned int format,

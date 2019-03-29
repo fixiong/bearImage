@@ -122,9 +122,9 @@ struct _UpFilter
 
 template<typename K, typename C>
 inline void upf5(
-	float * srow1,
-	float * srow2,
-	float * srow3,
+	array_ptr<float> srow1,
+	array_ptr<float> srow2,
+	array_ptr<float> srow3,
 	array_ptr<float> drow,
 	array_ptr<float> drow1,
 	int &x,
@@ -149,9 +149,9 @@ inline void upf5(
 
 template<typename K, typename C>
 inline void upf5(
-	unsigned short * srow1,
-	unsigned short * srow2,
-	unsigned short * srow3,
+	array_ptr<unsigned short> srow1,
+	array_ptr<unsigned short> srow2,
+	array_ptr<unsigned short> srow3,
 	array_ptr<unsigned short> drow,
 	array_ptr<unsigned short> drow1,
 	int &x,
@@ -178,9 +178,9 @@ template<typename K>
 struct _UpFilter<5, K>
 {
 	template<typename Unit, typename C = Dfc>
-	static void run(const image_ptr<Unit,1> & dst, const image_ptr<Unit, 1> & src, C &&c = Dfc())
+	static void run(image_ptr<Unit,1> dst, image_ptr<Unit, 1> src, C &&c = Dfc())
 	{
-		Unit *srow1, *srow2, *srow3;
+		array_ptr<Unit> srow1, srow2, srow3;
 		int dw = dst.width();
 		array_ptr<Unit> drow1;
 
@@ -188,9 +188,9 @@ struct _UpFilter<5, K>
 		for (size_t y = 0; y<dst.height(); ++y)
 		{
 			int sy = y >> 1;
-			srow1 = src[sy].data();
-			srow2 = src[sy + 1].data();
-			srow3 = src[sy + 2].data();
+			srow1 = src[sy];
+			srow2 = src[sy + 1];
+			srow3 = src[sy + 2];
 			array_ptr<Unit> drow = dst[y];
 
 			++y;
@@ -204,10 +204,11 @@ struct _UpFilter<5, K>
 
 			for (int x = 0; x<dw; ++x)
 			{
-				upf5<K>(srow1, srow2, srow3, drow, drow1, x, std::forward<C>(c));
-				++srow1;
-				++srow2;
-				++srow3;
+				upf5<K>(
+					srow1.clip(x,srow1.size()),
+					srow2.clip(x,srow2.size()),
+					srow3.clip(x,srow3.size()),
+					drow, drow1, x, std::forward<C>(c));
 			}
 		}
 	}
@@ -290,7 +291,7 @@ void down_line_dx(array_ptr<Unit> dst,array_ptr<Unit> src)
 	int sw = src.size();
 	int dw = size_down<_K::Size>(sw);
 
-	Unit tmp[K::Size];
+	std::array<Unit,K::Size> tmp;
 
 	int lm = K::Size >> 1;
 
@@ -317,7 +318,7 @@ void down_line_dx(array_ptr<Unit> dst,array_ptr<Unit> src)
 
 	for (int i = lm; i<mi; ++i)
 	{
-		dst[i] = zu::to_zero(KernelADP<K::Size, K>::run_hz(src.clip(s,src.size()));
+		dst[i] = zu::to_zero(KernelADP<K::Size, K>::run_hz(src.clip(s,src.size())));
 		s += 2;
 	}
 
@@ -334,7 +335,7 @@ void down_line_dx(array_ptr<Unit> dst,array_ptr<Unit> src)
 				tmp[j] = src[j + s];
 			}
 		}
-		dst[i] = zu::to_zero(KernelADP<K::Size, K>::run_hz(tmp));
+		dst[i] = zu::to_zero(KernelADP<K::Size, K>::run_hz(array_ptr<Unit>(tmp)));
 		s += 2;
 	}
 }
@@ -434,7 +435,7 @@ template<int Size, typename K>
 struct _DownFilter
 {
 	template<bool D, typename Unit, typename C = Dfc>
-	static void _run(const image_ptr<Unit,1> & dst, const image_ptr<Unit,1> & src, C &&c = Dfc())
+	static void _run(image_ptr<Unit,1> dst, image_ptr<Unit,1> src, C &&c = Dfc())
 	{
 		typedef _DOWN_LINE<D,K> DL;
 
@@ -489,19 +490,19 @@ struct _DownFilter
 	}
 
 	template<typename Unit, typename C = Dfc>
-	static void run(const image_ptr<Unit,1> & dst, const image_ptr<Unit, 1> & src, C &&c = Dfc())
+	static void run(image_ptr<Unit,1> dst, image_ptr<Unit, 1> src, C &&c = Dfc())
 	{
 		_run<false,Unit>(dst, src, c);
 	}
 
 	template<typename Unit, typename C = Dfc>
-	static void run_dx(const image_ptr<Unit, 1> & dst, const image_ptr<Unit, 1> & src, C &&c = Dfc())
+	static void run_dx(image_ptr<Unit, 1>  dst, image_ptr<Unit, 1> src, C &&c = Dfc())
 	{
 		_run<true, Unit>(dst, src, c);
 	}
 
 	template<typename Unit, typename C = Dfc>
-	static void run_dy(const image_ptr<Unit, 1> & dst, const image_ptr<Unit, 1> & src, C &&c = Dfc())
+	static void run_dy(image_ptr<Unit, 1> dst, image_ptr<Unit, 1> src, C &&c = Dfc())
 	{
 		typedef _DOWN_LINE<false, K> DL;
 

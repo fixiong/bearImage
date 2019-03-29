@@ -4,7 +4,6 @@
 
 #include "../../bear/include/ptr_algorism.h"
 
-#include <assert.h>
 #include <cmath>
 #include <algorithm>
 
@@ -48,19 +47,6 @@ struct UpKernel
 };
 
 template<typename Unit>
-static void set_zero_sign(const image_ptr<Unit,1> &img)
-{
-	for (size_t y = 0; y<img.height(); ++y)
-	{
-		auto row = img[y];
-		for (size_t x = 0; x<img.width(); ++x)
-		{
-			row[x] = _ZERO_UNIT<Unit>::run();
-		}
-	}
-}
-
-template<typename Unit>
 struct Iteration {};
 
 
@@ -68,16 +54,16 @@ template<>
 struct Iteration<unsigned short>
 {
 	static void run(
-		const image_ptr<unsigned short, 1> &dst,
-		const image_ptr<unsigned short, 1> &dx,
-		const image_ptr<unsigned short, 1> &dy,
+		image_ptr<unsigned short, 1> dst,
+		image_ptr<unsigned short, 1> dx,
+		image_ptr<unsigned short, 1> dy,
 		int iteration_time);
 };
 
 void Iteration<unsigned short>::run(
-	const image_ptr<unsigned short, 1> &dst,
-	const image_ptr<unsigned short, 1> &dx,
-	const image_ptr<unsigned short, 1> &dy,
+	image_ptr<unsigned short, 1> dst,
+	image_ptr<unsigned short, 1> dx,
+	image_ptr<unsigned short, 1> dy,
 	int iteration_time)
 {
 	for (int k = 0; k<iteration_time; ++k)
@@ -197,16 +183,16 @@ template<>
 struct Iteration<float>
 {
 	static void run(
-		const image_ptr<float,1> &dst,
-		const image_ptr<float, 1> &dx,
-		const image_ptr<float, 1> &dy,
+		image_ptr<float, 1> dst,
+		image_ptr<float, 1> dx,
+		image_ptr<float, 1> dy,
 		int iteration_time);
 };
 
 void Iteration<float>::run(
-	const image_ptr<float, 1> &dst,
-	const image_ptr<float, 1> &dx,
-	const image_ptr<float, 1> &dy,
+	image_ptr<float, 1> dst,
+	image_ptr<float, 1> dx,
+	image_ptr<float, 1> dy,
 	int iteration_time)
 {
 	image_ptr<float, 1> lp = dx;
@@ -326,14 +312,14 @@ void Iteration<float>::run(
 
 template<typename Unit>
 static void scale_recursion(
-	const image_ptr<Unit, 1> & dst,
-	const image_ptr<Unit, 1> &dx,
-	const image_ptr<Unit, 1> &dy,
+	image_ptr<Unit, 1> dst,
+	image_ptr<Unit, 1> dx,
+	image_ptr<Unit, 1> dy,
 	int iteration_time, unsigned int n_layer)
 {
 	if (!n_layer)
 	{
-		set_zero_sign<Unit>(dst);
+		dst.fill(_ZERO_UNIT<Unit>::run());
 		return;
 	}
 
@@ -356,9 +342,9 @@ static void scale_recursion(
 
 template<typename Unit>
 void dxy_poisson_solver_inner(
-	const image_ptr<Unit,1> &_dst,
-	const image_ptr<Unit, 1> &dx,
-	const image_ptr<Unit, 1> &dy,
+	image_ptr<Unit, 1> _dst,
+	image_ptr<Unit, 1> dx,
+	image_ptr<Unit, 1> dy,
 	unsigned int iteration_time,
 	int base_level)
 {
@@ -404,7 +390,7 @@ void dxy_poisson_solver(
 	if (dst.elm_size() == 16 && dx.elm_size() == 16 && dy.elm_size() == 16)
 	{
 		dxy_poisson_solver_inner(
-			image_ptr<unsigned short,1>(dst),
+			image_ptr<unsigned short, 1>(dst),
 			image_ptr<unsigned short, 1>(dx),
 			image_ptr<unsigned short, 1>(dy),
 			iteration_time, base_level);
@@ -419,6 +405,6 @@ void dxy_poisson_solver(
 	}
 	else
 	{
-		throw bear_exception(exception_type::other_error, "unsuported image type!");
+		throw bear_exception(exception_type::other_error, "unsupported image type!");
 	}
 }

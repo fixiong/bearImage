@@ -1,7 +1,6 @@
 #include "possion_stiching.h"
 #include "possion_solver.h"
 
-#include <assert.h>
 #include <cmath>
 
 #include <algorithm>
@@ -12,40 +11,42 @@
 
 #include "possion_stiching_dif.hpp"
 
+#include "../../bear/include/ptr_algorism.h"
+
 using namespace bear;
 using namespace std;
 
-
-static void mask_to_byte(Image &maskbuf,PImage &mask,const PImage &_mask)
+template<typename Unit>
+image<unsigned char, 1> mask_to_byte_inner(const_tensor_ptr<Unit, 3> img)
 {
-	if (n_channel(_mask) > 1 || depth(_mask) != 8)
+	image<unsigned char, 1> ret;
+	zip_to<2>([](unsigned char &r, const_array_ptr<Unit> s)
 	{
-		maskbuf.construct(size(_mask), 1, 8);
-		mask = maskbuf;
+		r = s[0] != 0 ? 255 : 0;
+	}, ret, src);
+	return ret;
+}
 
-		switch (depth(_mask))
-		{
-		case 8:
-			transform_channel<unsigned char, unsigned char>(
-				mask, 0, _mask, 0, [](unsigned char v) {return v != 0 ? 255 : 0; });
-			break;
-		case 16:
-			transform_channel<unsigned char, unsigned short>(
-				mask, 0, _mask, 0, [](unsigned short v) {return v != 0 ? 255 : 0; });
-			break;
-		case 32:
-			transform_channel<unsigned char, unsigned int>(
-				mask, 0, _mask, 0, [](unsigned int v) {return v != 0 ? 255 : 0; });
-			break;
-		default:
-			assert(false);
-		}
-	}
-	else
+static image<unsigned char,1> mask_to_byte(const const_dynamic_image_ptr &mask)
+{
+	if (mask.channel_size() == 1 && mask.elm_size() == 1)
 	{
-		mask = _mask;
+		return image<unsigned char, 1>();
 	}
 
+	switch (mask.elm_size())
+	{
+	case 1:
+		return mask_to_byte_inner<unsigned char>(const_tensor_ptr<unsigned char, 3>(mask));
+	case 2:
+		return mask_to_byte_inner<unsigned short>(const_tensor_ptr<unsigned short, 3>(mask));
+	case 4:
+		return mask_to_byte_inner<unsigned int>(const_tensor_ptr<unsigned int, 3>(mask));
+	case 8:
+		return mask_to_byte_inner<unsigned long long>(const_tensor_ptr<unsigned long long, 3>(mask));
+	default:
+		throw bear_exception(exception_type::other_error, "wrong mask type!");
+	}
 }
 
 void mask_merg(
