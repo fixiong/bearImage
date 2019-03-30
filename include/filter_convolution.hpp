@@ -127,7 +127,7 @@ inline void upf5(
 	array_ptr<float> srow3,
 	array_ptr<float> drow,
 	array_ptr<float> drow1,
-	int &x,
+	size_t &x,
 	C &&c)
 {
 	float s12_32 = srow1[2] + srow3[2];
@@ -154,7 +154,7 @@ inline void upf5(
 	array_ptr<unsigned short> srow3,
 	array_ptr<unsigned short> drow,
 	array_ptr<unsigned short> drow1,
-	int &x,
+	size_t &x,
 	C &&c)
 {
 	unsigned int s12_32 = srow1[2] + srow3[2];
@@ -204,7 +204,7 @@ struct _UpFilter<5, K>
 			else drow1 = dst[y];
 
 
-			for (int x = 0; x<dw; ++x)
+			for (size_t x = 0; x<dw; ++x)
 			{
 				upf5<K>(
 					srow1.clip(x,srow1.size()),
@@ -297,11 +297,11 @@ void down_line_dx(Line dst,Line src)
 
 	std::array<Unit,K::Size> tmp;
 
-	int lm = K::Size >> 1;
+	size_t lm = K::Size >> 1;
 
 	int s = 1 - K::Size;
 
-	for (int i = 0; i < lm; ++i)
+	for (size_t i = 0; i < lm; ++i)
 	{
 		for (int j = 0; j<K::Size; ++j)
 		{
@@ -328,7 +328,7 @@ void down_line_dx(Line dst,Line src)
 
 	for (auto i = mi; i<dw; ++i)
 	{
-		for (int j = 0; j<K::Size; ++j)
+		for (size_t j = 0; j<K::Size; ++j)
 		{
 			if (j + s >= sw)
 			{
@@ -354,13 +354,13 @@ void down_line(Line dst, Line src)
 
 	std::array<Unit,K::Size> tmp;
 
-	int lm = K::Size >> 1;
+	size_t lm = K::Size >> 1;
 
 	int s = 1 - K::Size;
 
-	for (int i = 0; i < lm; ++i)
+	for (size_t i = 0; i < lm; ++i)
 	{
-		for (int j = 0; j<K::Size; ++j)
+		for (size_t j = 0; j<K::Size; ++j)
 		{
 			if (j + s<0)
 			{
@@ -385,7 +385,7 @@ void down_line(Line dst, Line src)
 
 	for (auto i = mi; i<dw; ++i)
 	{
-		for (int j = 0; j<K::Size; ++j)
+		for (size_t j = 0; j<K::Size; ++j)
 		{
 			if (j + s >= sw)
 			{
@@ -407,7 +407,7 @@ inline void roll_buf(Line buf[])
 	auto tmp1 = buf[0];
 	auto tmp2 = buf[1];
 
-	for (int i = 0; i<Size - 2; ++i)
+	for (size_t i = 0; i<Size - 2; ++i)
 	{
 		buf[i] = buf[i + 2];
 	}
@@ -462,13 +462,13 @@ struct _DownFilter
 
 		size_t sh = src.height();
 
-		int s = - 1;
+		size_t s = - 1;
 
 		for (size_t i = 0; i<dst.height(); ++i)
 		{
 
 
-			for (int j = Size - 2; j<Size; ++j)
+			for (size_t j = Size - 2; j<Size; ++j)
 			{
 				if (s < 0)
 				{
@@ -488,7 +488,7 @@ struct _DownFilter
 			size_t dw = dst.width();
 			auto drow = dst[i];
 
-			for (int j = 0; j<dw; ++j)
+			for (size_t j = 0; j<dw; ++j)
 			{
 				std::forward<C>(c)(drow[j], KernelADP<Size, K>::run_vt(buf, j));
 			}
@@ -531,15 +531,15 @@ struct _DownFilter
 			buf[j].fill(_ZERO_UNIT<Unit>::run());
 		}
 
-		size_t sh = src.height();
+		auto sh = src.height();
 
-		int s = -1;
+		size_t s = -1;
 
 		for (size_t i = 0; i<dst.height(); ++i)
 		{
 
 
-			for (int j = _Size - 2; j<_Size; ++j)
+			for (size_t j = _Size - 2; j<_Size; ++j)
 			{
 				if (s < 0)
 				{
@@ -559,7 +559,7 @@ struct _DownFilter
 			size_t dw = dst.width();
 			auto drow = dst[i];
 
-			for (int j = 0; j<dw; ++j)
+			for (size_t j = 0; j<dw; ++j)
 			{
 				std::forward<C>(c)(drow[j], _ZERO_UNIT<Unit>::to_zero(KernelADP<_Size, _K>::run_vt(buf, j)));
 			}

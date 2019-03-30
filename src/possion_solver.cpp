@@ -89,7 +89,7 @@ void Iteration<unsigned short>::run(
 
 			if (0 == y)
 			{
-				int x = x_flag;
+				size_t x = x_flag;
 
 				if (!x)
 				{
@@ -118,7 +118,7 @@ void Iteration<unsigned short>::run(
 			}
 			else if(dst.height() - 1 == y)
 			{
-				int x = x_flag;
+				size_t x = x_flag;
 
 				if (!x)
 				{
@@ -147,7 +147,7 @@ void Iteration<unsigned short>::run(
 			}
 			else
 			{
-				int x = x_flag;
+				size_t x = x_flag;
 
 				if (!x)
 				{
@@ -208,8 +208,8 @@ void Iteration<float>::run(
 
 		if (y == dst.height() - 1)
 		{
-			size_t mx = dst.width() - 1;
-			for (int x = 0; x<mx; ++x)
+			auto mx = dst.width() - 1;
+			for (size_t x = 0; x<mx; ++x)
 			{
 				drow[x] = xrow[x] - xrow[x + 1] + yrow1[x];
 			}
@@ -217,8 +217,8 @@ void Iteration<float>::run(
 		}
 		else
 		{
-			size_t mx = dst.width() - 1;
-			for (int x = 0; x<mx; ++x)
+			auto mx = dst.width() - 1;
+			for (size_t x = 0; x<mx; ++x)
 			{
 				drow[x] = xrow[x] - xrow[x + 1] + yrow1[x] - yrow2[x];
 			}
@@ -243,7 +243,7 @@ void Iteration<float>::run(
 
 			if (0 == y)
 			{
-				int x = x_flag;
+				size_t x = x_flag;
 
 				if (!x)
 				{
@@ -251,7 +251,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				size_t mx = dst.width() - 1;
+				auto mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
@@ -264,7 +264,7 @@ void Iteration<float>::run(
 			}
 			else if (dst.height() - 1 == y)
 			{
-				int x = x_flag;
+				size_t x = x_flag;
 
 				if (!x)
 				{
@@ -272,7 +272,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				size_t mx = dst.width() - 1;
+				auto mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
@@ -285,7 +285,7 @@ void Iteration<float>::run(
 			}
 			else
 			{
-				int x = x_flag;
+				size_t x = x_flag;
 
 				if (!x)
 				{
@@ -294,7 +294,7 @@ void Iteration<float>::run(
 
 					x += 2;
 				}
-				size_t mx = dst.width() - 1;
+				auto mx = dst.width() - 1;
 				for (; x<mx; x += 2)
 				{
 					drow2[x] = (lprow[x] +
