@@ -236,21 +236,17 @@ void poisson_stiching(
 }
 
 
-template<typename C>
-static void for_each_img(const vector<vector<PImage>> &src,unsigned int rd, C && c)
+template<typename Src, typename C>
+static void for_each_img(Src src,unsigned int rd, C && c)
 {
-	int nw = (int)src[0].size();
-	int nh = (int)src.size();
-
-	vector<int> bws;
-	vector<int> bhs;
+	auto nw = size_at<1>(src);
+	auto nh = size_at<0>(src);
 
 	int cpy = 0;
 	for (int y = 0; y < nh; ++y)
 	{
-		assert(src[y].size() == nw);
 
-		int rh = src[y][0].height;
+		int rh = src[y][0].height();
 		int bh = rh;
 		int py = 0;
 
@@ -262,14 +258,11 @@ static void for_each_img(const vector<vector<PImage>> &src,unsigned int rd, C &&
 
 		if (nh - 1 != y) bh -= rd;
 
-		bhs.push_back(bh);
-
 		int cpx = 0;
 		for (int x = 0; x < nw; ++x)
 		{
-			assert(src[y][x].height == rh);
 
-			int rw = src[y][x].width;
+			int rw = src[y][x].width();
 			int bw = rw;
 			int px = 0;
 
@@ -281,81 +274,80 @@ static void for_each_img(const vector<vector<PImage>> &src,unsigned int rd, C &&
 
 			if (nw - 1 != x) bw -= rd;
 
-			if (y)assert(bw == bws[x]);
-			else bws.push_back(bw);
-
 			forward<C>(c)(
-				src, x, y,
-				PSize(bw, bh),
-				PPoint(px, py),
-				PPoint(cpx, cpy));
+				x, y,
+				image_size(bw, bh),
+				image_point(px, py),
+				image_point(cpx, cpy));
 
 			cpx += bw;
 		}
 
 		cpy += bh;
 	}
-
 }
 
-template<typename Unit>
+template<typename Unit, typename Dst, typename Src>
 static void _poisson_stiching_m(
-	const bear::PImage &dst,
-	const vector<vector<PImage>> &src,
-	unsigned int rd,
+	Dst dst,
+	Src src,
+	size_t rd,
 	unsigned int format,
 	PStichingParam param)
 {
 
 	_poisson_stiching_inner<Unit>(
 		dst, dst,
-		[&src, &param, rd](PImage dx, int ch)
+		[&src, &param, rd](image_ptr<Unit,1> dx, int ch)
 	{
 		clear_d<Unit>(dx);
-		for_each_img(src, rd, [&dx, ch, &param, rd](
-			const vector<vector<PImage>> &src,
+		for_each_img(src, rd, [src, &dx, ch, &param, rd](
 			int x, int y,
-			PSize bs,
-			PPoint p,
-			PPoint cp
+			image_point bs,
+			image_size p,
+			image_size cp
 			)
 		{
 			if (src[y].size() - 1 == x)return;
 
+			auto sz = image_size(rd * 2, bs.height());
+
 			auto img1 = src[y][x];
 			auto img2 = src[y][x + 1];
 
-			img1 = clip_image(img1, img1.width - rd * 2, p.y, rd * 2, bs.height);
-			img2 = clip_image(img2, 0, p.y, rd * 2, bs.height);
+			auto img1 = img1.clip(image_rectangle{ { img1.width() - rd * 2, p.y } ,sz });
+			auto img2 = img2.clip(image_rectangle{ { 0, p.y } ,sz });
 
-			auto dst = clip_image(dx, cp.x + bs.width - rd, cp.y, rd * 2, bs.height);
+			auto dst = dx.clip(image_rectangle{ {cp.x + bs.width - rd, cp.y} ,sz });
 
-			x_d_p<Unit>(dst, img1, img2, ch, param.max_grandient);
+			x_d_p<Unit>(dst, img1, img2, ch, _ZERO_PS<Unit>());
 
 		});
 	},
-		[&src, &param, rd](PImage dy, int ch)
+		[&src, &param, rd](image_ptr<Unit, 1> dy, int ch)
 	{
 		clear_d<Unit>(dy);
 		for_each_img(src, rd, [&dy, ch, &param, rd](
 			const vector<vector<PImage>> &src,
 			int x, int y,
-			PSize bs,
-			PPoint p,
-			PPoint cp
+			image_point bs,
+			image_size p,
+			image_size cp
 			)
 		{
 			if (src.size() - 1 == y)return;
 
+			auto sz = image_size(bs.width(), rd * 2);
+
 			auto img1 = src[y][x];
 			auto img2 = src[y + 1][x];
 
-			img1 = clip_image(img1, p.x, img1.height - rd * 2, bs.width, rd * 2);
-			img2 = clip_image(img2, p.x, 0, bs.width, rd * 2);
+			auto img1 = img1.clip(image_rectangle{ { p.x, img1.height() - rd * 2 } ,sz });
+			auto img2 = img2.clip(image_rectangle{ { p.x, 0 } ,sz });
 
-			auto dst = clip_image(dy, cp.x, cp.y + bs.height - rd, bs.width, rd * 2);
+			auto dst = dx.clip(image_rectangle{ { cp.x, cp.y + bs.height - rd } ,sz });
 
-			y_d_p<Unit>(dst, img1, img2, ch, param.max_grandient);
+			y_d_p<Unit>(dst, img1, img2, ch, _ZERO_PS<Unit>());
 		});
 	},
 		format,
@@ -364,42 +356,123 @@ static void _poisson_stiching_m(
 
 }
 
-
-void poisson_stiching(
-	const bear::PImage &dst,
-	const PStichingVectorSrc &src,
-	unsigned int rd,
+template<typename Dst, typename Src>
+static void _poisson_stiching_a(
+	Dst dst,
+	Src src,
+	size_t rd,
 	unsigned int format,
 	PStichingParam param)
 {
-	assert(
-		n_channel(dst) == FI_BPP(format) &&
-		8 == depth(dst));
-
-	for_each_img(src.src, rd, [&dst](
-		const vector<vector<PImage>> &src,
-		int x,int y,
-		PSize bs,
-		PPoint p,
-		PPoint cp
-		) 
+	for_each_img(src, rd, [&dst, &src](
+		int x, int y,
+		image_size bs,
+		image_point p,
+		image_point cp
+		)
 	{
 		auto img = src[y][x];
 
-		PImage s = clip_image(img, PRect(p, bs));
-
-		PImage d = clip_image(dst, PRect(cp, bs));
+		auto s = img.clip(image_rectangle{ p, bs });
+		auto d = dst.clip(image_rectangle{ cp, bs });
 
 		copy(d, s);
 	});
 
 	if (param.float_precision)
 	{
-		_poisson_stiching_m<float>(dst, src.src, rd, format, param);
+		_poisson_stiching_m<float>(dst, src, rd, format, param);
 	}
 	else
 	{
-		_poisson_stiching_m<unsigned short>(dst, src.src, rd, format, param);
+		_poisson_stiching_m<unsigned short>(dst, src, rd, format, param);
+	}
+
+}
+
+static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, size_t redundance, unsigned int format)
+{
+	if (0 == to_ptr(src).total_size())
+	{
+		throw bear_exception(exception_type::pointer_outof_range, "empty src!");
+	}
+
+	auto es = src[0][0].elm_size();
+
+	if (es != 8 && es != 16)
+	{
+		throw bear_exception(exception_type::other_error, "only support to 24bit or 48bit image!");
+	}
+
+	auto h = size_at<0>(src);
+	auto w = size_at<1>(src);
+
+	vector<size_t> hs(h);
+	vector<size_t> ws(w);
+
+	for (size_t y = 0; y < h; ++y)
+	{
+		hs[y] = src[y][0].height();
+		for (size_t x = 0; x < w; ++x)
+		{
+			auto img =src[y][x];
+			if (0 == x)
+			{
+				ws[x] = img.width();
+			}
+
+			if (ws[x] != img.width() ||
+				hs[y] != img.height() ||
+				es != img.elm_size() ||
+				FI_BPP(format) != img.channel_size())
+			{
+				throw bear_exception(exception_type::size_different, "src size inconsistence!");
+			}
+		}
+	}
+
+	image_size ret(0,0);
+
+	to_ptr(hs).for_each([&ret](size_t s) {
+		ret.height += s;
+	});
+
+	to_ptr(ws).for_each([&ret](size_t s) {
+		ret.width += s;
+	});
+
+	ret.height -= redundance * (h - 1);
+	ret.width -= redundance * (w - 1);
+
+	if (ret.height > 1000000 || ret.width > 1000000)
+	{
+		throw bear_exception(exception_type::pointer_outof_range, "wrong dst size!");
+	}
+
+	return ret;
+}
+
+
+
+void poisson_stiching(
+	dynamic_image_ptr dst,
+	const PStichingVectorSrc &src,
+	size_t rd,
+	unsigned int format,
+	PStichingParam param = PStichingParam())
+{
+	if (dst.size() != check_src(src.src, rd, format) || dst.elm_size() != src.src[0][0].elm_size())
+	{
+		throw bear_exception(exception_type::size_different, "src dst size different!");
+	}
+
+	if (8 == dst.elm_size())
+	{
+		_poisson_stiching_a(
+			tensor_ptr
+			map_function([]() {},)
+
+		)
 	}
 }
 
@@ -476,10 +549,10 @@ inline float error_tt(PImage img1, PImage img2, unsigned int format, float th_cv
 }
 
 void poisson_stiching_check(
-	std::vector<bear::PPoint> error_block,
-	const std::vector<bear::PPoint> eliminate,
+	std::vector<image_point> error_block,
+	const std::vector<image_point> eliminate,
 	const PStichingVectorSrc &src,
-	unsigned int rd,
+	size_t rd,
 	unsigned int format,
 	float th_cv,
 	float th_mse)

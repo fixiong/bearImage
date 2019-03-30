@@ -49,7 +49,7 @@ struct KernelADP<5,K>
 	{
 		return run(p[0],p[1],p[2],p[3],p[4]);
 	}
-	static float run_vt(array_ptr<float> p[],int i)
+	static float run_vt(array_ptr<float> p[],size_t i)
 	{
 		return run(p[0][i],p[1][i],p[2][i],p[3][i],p[4][i]);
 	}
@@ -68,7 +68,7 @@ struct KernelADP<5,K>
 	{
 		return run(p[0],p[1],p[2],p[3],p[4]);
 	}
-	static unsigned int run_vt(array_ptr<unsigned short> p[],int i)
+	static unsigned int run_vt(array_ptr<unsigned short> p[], size_t i)
 	{
 		return run(p[0][i],p[1][i],p[2][i],p[3][i],p[4][i]);
 	}
@@ -87,7 +87,7 @@ struct KernelADP<6, K>
 	{
 		return run(p[0], p[1], p[2], p[3], p[4], p[5]);
 	}
-	static float run_vt(array_ptr<float> p[], int i)
+	static float run_vt(array_ptr<float> p[], size_t i)
 	{
 		return run(p[0][i], p[1][i], p[2][i], p[3][i], p[4][i], p[5][i]);
 	}
@@ -107,7 +107,7 @@ struct KernelADP<6, K>
 	{
 		return run(p[0], p[1], p[2], p[3], p[4], p[5]);
 	}
-	static unsigned int run_vt(array_ptr<unsigned short> p[], int i)
+	static unsigned int run_vt(array_ptr<unsigned short> p[], size_t i)
 	{
 		return run(p[0][i], p[1][i], p[2][i], p[3][i], p[4][i], p[5][1]);
 	}
