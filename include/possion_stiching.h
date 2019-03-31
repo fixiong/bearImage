@@ -76,7 +76,7 @@ void poisson_stiching(
 
 void poisson_stiching_check(
 	std::vector<bear::image_point> error_block,
-	const std::vector<bear::image_point> eliminate,
+	bear::const_array_ptr<bear::image_point> eliminate,
 	const PStichingVectorSrc &src,
 	size_t rd,
 	unsigned int format,

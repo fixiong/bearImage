@@ -1,8 +1,7 @@
 #ifndef _POSSION_STICHING_DIF_HPP
 #define _POSSION_STICHING_DIF_HPP
 
-#include "possion_stiching.h"
-#include <memory.h>
+#include "../../bear/include/image.h"
 
 
 using namespace bear;
@@ -105,18 +104,18 @@ static void x_d(
 	Dst dx,
 	Src src,
 	unsigned int ch,
-	image_ptr<unsigned char,1> mask,
+	const_image_ptr<unsigned char,1> mask,
 	ZP && zp)
 {
 	dx.fill(zp.run());
 
-	for (size_t y = 0; y < size_at<0>(src); ++y)
+	for (size_t y = 0; y < height(src); ++y)
 	{
 		auto drow = dx[y];
 		auto srow = src[y];
 		auto mrow = mask[y];
 
-		for (size_t x = 1; x < size_at<1>(src); ++x)
+		for (size_t x = 1; x < width(src); ++x)
 		{
 			bool f1 = 0 != mrow[x - 1];
 			bool f2 = 0 != mrow[x];
@@ -134,12 +133,12 @@ static void y_d(
 	Dst dy,
 	Src src,
 	unsigned int ch,
-	image_ptr<unsigned char, 1> mask,
+	const_image_ptr<unsigned char, 1> mask,
 	ZP && zp)
 {
 	dy.fill(zp.run());
 
-	for (int y = 1; y < size_at<0>(src); ++y)
+	for (int y = 1; y < height(src); ++y)
 	{
 		auto drow = dy[y];
 		auto srow = src[y];
@@ -148,14 +147,14 @@ static void y_d(
 		auto srow_ = src[y - 1];
 		auto mrow_ = mask[y - 1];
 
-		for (int x = 0; x < size_at<1>(src); ++x)
+		for (int x = 0; x < width(src); ++x)
 		{
 			bool f1 = 0 != mrow_[x];
 			bool f2 = 0 != mrow[x];
 
 			if (f1 != f2)
 			{
-				drow[x] = std::forward<ZP>(zp).from_unit(srow_[x],srow[x]);
+				drow[x] = std::forward<ZP>(zp).from_unit(srow_[x][ch],srow[x][ch]);
 			}
 		}
 	}
@@ -166,10 +165,10 @@ static void x_d_p(
 	Dst dx,
 	Src src1,
 	Src src2,
-	unsigned int ch,
+	size_t ch,
 	ZP && zp)
 {
-	unsigned int rd = dx.width() / 2;
+	auto rd = dx.width() / 2;
 	double bs = 1.0 / dx.width();
 
 	for (size_t y = 0; y < dx.height(); ++y)
@@ -180,7 +179,7 @@ static void x_d_p(
 			t += std::forward<ZP>(zp).from_unit(src1[y][x][ch], src2[y][x][ch]);
 		}
 
-		dx[y][rd] = (typename Dst::elem_type)floor(t * bs + 0.5);
+		dx[y][rd] = (typename Dst::elm_type)floor(t * bs + 0.5);
 	}
 }
 
@@ -189,11 +188,11 @@ static void y_d_p(
 	Dst dy,
 	Src src1,
 	Src src2,
-	unsigned int ch,
+	size_t ch,
 	ZP && zp)
 {
-	unsigned int rd = dy.height() / 2;
-	double bs = 1.0 / dx.height();
+	auto rd = dy.height() / 2;
+	double bs = 1.0 / dy.height();
 
 	for (size_t x = 0; x < dy.width(); ++x)
 	{
@@ -203,7 +202,7 @@ static void y_d_p(
 			t += std::forward<ZP>(zp).from_unit(src1[y][x][ch], src2[y][x][ch]);
 		}
 
-		dx[rd][x] = (typename Dst::elem_type)floor(t * bs + 0.5);
+		dy[rd][x] = (typename Dst::elm_type)floor(t * bs + 0.5);
 	}
 }
 

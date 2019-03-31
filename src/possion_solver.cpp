@@ -1,6 +1,6 @@
 #include "../include/possion_solver.h"
-#include "../include/utility.hpp"
-#include "../include/filter_convolution.hpp"
+#include "../include/utility.h"
+#include "filter_convolution.hpp"
 
 #include "../../bear/include/ptr_algorism.h"
 
