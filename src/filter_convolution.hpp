@@ -207,9 +207,9 @@ struct _UpFilter<5, K>
 			for (size_t x = 0; x<dw; ++x)
 			{
 				upf5<K>(
-					srow1.clip(x,srow1.size()),
-					srow2.clip(x,srow2.size()),
-					srow3.clip(x,srow3.size()),
+					srow1.clip(x>>1,srow1.size()),
+					srow2.clip(x>>1,srow2.size()),
+					srow3.clip(x>>1,srow3.size()),
 					drow, drow1, x, std::forward<C>(c));
 			}
 		}
@@ -299,13 +299,13 @@ void down_line_dx(Line dst,Line src)
 
 	size_t lm = K::Size >> 1;
 
-	int s = 1 - K::Size;
+	pos_t s = 1 - K::Size;
 
 	for (size_t i = 0; i < lm; ++i)
 	{
 		for (int j = 0; j<K::Size; ++j)
 		{
-			if (j + s<0)
+			if (pos_t(j + s)<0)
 			{
 				tmp[j] = _ZERO_UNIT<Unit>::run();
 			}
@@ -356,13 +356,13 @@ void down_line(Line dst, Line src)
 
 	size_t lm = K::Size >> 1;
 
-	int s = 1 - K::Size;
+	pos_t s = 1 - K::Size;
 
 	for (size_t i = 0; i < lm; ++i)
 	{
 		for (size_t j = 0; j<K::Size; ++j)
 		{
-			if (j + s<0)
+			if ((pos_t)(j + s)<0)
 			{
 				tmp[j] = src[0];
 			}
@@ -462,7 +462,7 @@ struct _DownFilter
 
 		size_t sh = src.height();
 
-		size_t s = - 1;
+		pos_t s = - 1;
 
 		for (size_t i = 0; i<dst.height(); ++i)
 		{
@@ -474,7 +474,7 @@ struct _DownFilter
 				{
 					DL::run(buf[j], src[0]);
 				}
-				else if (s >= sh)
+				else if ((size_t)s >= sh)
 				{
 					DL::run(buf[j], src[sh - 1]);
 				}
@@ -533,7 +533,7 @@ struct _DownFilter
 
 		auto sh = src.height();
 
-		size_t s = -1;
+		pos_t s = -1;
 
 		for (size_t i = 0; i<dst.height(); ++i)
 		{
@@ -545,7 +545,7 @@ struct _DownFilter
 				{
 					buf[j].fill(_ZERO_UNIT<Unit>::run());
 				}
-				else if (s >= sh)
+				else if ((size_t)s >= sh)
 				{
 					buf[j].fill(_ZERO_UNIT<Unit>::run());
 				}

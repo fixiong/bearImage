@@ -84,7 +84,12 @@ static void stiching(Image dst, Ds ds, unsigned int ch)
 		array_ptr<typename Image::elm_type> d,
 		Unit s)
 	{
+		//typename Image::elm_type u = 128;
+		//_ZERO_PS<Unit>::to_unit(u, s);
+		//d[ch] = 255 - u;
+
 		_ZERO_PS<Unit>::to_unit(d[ch], s);
+
 	}, dst, ds);
 }
 
@@ -154,8 +159,8 @@ void poisson_stiching_merged(
 	assert(
 		dst.channel_size() == FI_BPP(format) &&
 		src.channel_size() == FI_BPP(format) &&
-		(8 == dst.elm_size() || 16 == dst.elm_size()) &&
-		(8 == src.elm_size() || 16 == src.elm_size()) &&
+		(1 == dst.elm_size() || 2 == dst.elm_size()) &&
+		(1 == src.elm_size() || 2 == src.elm_size()) &&
 		src.elm_size() == dst.elm_size() &&
 		src.width() == dst.width() &&
 		src.height() == dst.height());
@@ -174,7 +179,7 @@ void poisson_stiching_merged(
 
 	if (param.float_precision)
 	{
-		if (8 == dst.elm_size())
+		if (1 == dst.elm_size())
 		{
 			_poisson_stiching_merged<float>(
 				tensor_ptr<unsigned char, 3>(dst),
@@ -192,7 +197,7 @@ void poisson_stiching_merged(
 	}
 	else
 	{
-		if (8 == dst.elm_size())
+		if (1 == dst.elm_size())
 		{
 			_poisson_stiching_merged<unsigned short>(
 				tensor_ptr<unsigned char, 3>(dst),
@@ -230,7 +235,7 @@ void poisson_stiching(
 		mask = const_image_ptr<unsigned char, 1>(_mask);
 	}
 
-	if (dst.elm_size() == 8)
+	if (dst.elm_size() == 1)
 	{
 		mask_merg(
 			tensor_ptr<unsigned char, 3>(dst),
@@ -322,7 +327,7 @@ static void _poisson_stiching_m(
 			image_point p,
 			image_point cp)
 		{
-			if (src[y].size() - 1 == x)return;
+			if (width(src) - 1 == x)return;
 
 			auto sz = image_size(rd * 2, bs.height);
 
@@ -347,7 +352,7 @@ static void _poisson_stiching_m(
 			image_point p,
 			image_point cp)
 		{
-			if (src.size() - 1 == y)return;
+			if (height(src) - 1 == y)return;
 
 			auto sz = image_size(bs.width, rd * 2);
 
@@ -410,7 +415,7 @@ static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, si
 
 	auto es = src[0][0].elm_size();
 
-	if (es != 8 && es != 16)
+	if (es != 1 && es != 2)
 	{
 		throw bear_exception(exception_type::other_error, "only support to 24bit or 48bit image!");
 	}
@@ -427,7 +432,7 @@ static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, si
 		for (size_t x = 0; x < w; ++x)
 		{
 			auto img =src[y][x];
-			if (0 == x)
+			if (0 == y)
 			{
 				ws[x] = img.width();
 			}
@@ -452,8 +457,8 @@ static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, si
 		ret.width += s;
 	});
 
-	ret.height -= redundance * (h - 1);
-	ret.width -= redundance * (w - 1);
+	ret.height -= redundance * (h - 1) * 2;
+	ret.width -= redundance * (w - 1) * 2;
 
 	if (ret.height > 1000000 || ret.width > 1000000)
 	{
@@ -477,7 +482,7 @@ void poisson_stiching(
 		throw bear_exception(exception_type::size_different, "src dst size different!");
 	}
 
-	if (8 == dst.elm_size())
+	if (1 == dst.elm_size())
 	{
 		_poisson_stiching_a(
 			tensor_ptr<unsigned char, 3>(dst),
@@ -589,8 +594,8 @@ void _poisson_stiching_check(
 	th_cv = th_cv * th_cv;
 	th_mse = th_mse * th_mse;
 
-	int bw = (int)src[0].size();
-	int bh = (int)src.size();
+	auto bw = width(src);
+	auto bh = height(src);
 
 	image<float, 1> dx(bw - 1, bh);
 	image<float, 1> dy(bw, bh - 1);
@@ -708,7 +713,7 @@ void poisson_stiching_check(
 {
 	check_src(src.src, rd, format);
 
-	if (8 == src.src[0][0].elm_size())
+	if (1 == src.src[0][0].elm_size())
 	{
 		_poisson_stiching_check(
 			error_block,

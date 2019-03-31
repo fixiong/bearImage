@@ -74,18 +74,21 @@ void Iteration<unsigned short>::run(
 		{
 			int x_flag = (y + y_flag) & 1;
 
-			auto xrow1 = dx[y - 1];
+			auto ym = y - 1 < dst.height() ? y - 1 : 0;
+			auto yp = y + 1 < dst.height() ? y + 1 : dst.height() - 1;
+
+			auto xrow1 = dx[ym];
 			auto xrow2 = dx[y];
-			auto xrow3 = dx[y + 1];
+			auto xrow3 = dx[yp];
 
-			auto yrow1 = dy[y - 1];
+			auto yrow1 = dy[ym];
 			auto yrow2 = dy[y];
-			auto yrow3 = dy[y + 1];
+			auto yrow3 = dy[yp];
 
 
-			auto drow1 = dst[y - 1];
+			auto drow1 = dst[ym];
 			auto drow2 = dst[y];
-			auto drow3 = dst[y + 1];
+			auto drow3 = dst[yp];
 
 			if (0 == y)
 			{
@@ -199,10 +202,12 @@ void Iteration<float>::run(
 
 	for (size_t y = 0; y<dst.height(); ++y)
 	{
+		auto yp = y + 1 < dst.height() ? y + 1 : dst.height() - 1;
+
 		auto xrow = dx[y];
 
 		auto yrow1 = dy[y];
-		auto yrow2 = dy[y + 1];
+		auto yrow2 = dy[yp];
 
 		auto drow = lp[y];
 
@@ -235,11 +240,14 @@ void Iteration<float>::run(
 		{
 			int x_flag = (y + y_flag) & 1;
 
+			auto ym = y - 1 < dst.height() ? y - 1 : 0;
+			auto yp = y + 1 < dst.height() ? y + 1 : dst.height() - 1;
+
 			auto lprow = lp[y];
 
-			auto drow1 = dst[y];
+			auto drow1 = dst[ym];
 			auto drow2 = dst[y];
-			auto drow3 = dst[y];
+			auto drow3 = dst[yp];
 
 			if (0 == y)
 			{
@@ -323,11 +331,11 @@ static void scale_recursion(
 		return;
 	}
 
-	auto subsz = size_down<5>(dst.size());
+	auto subsz = size_down<5>(size(dst));
 
-	image<Unit, 1> sub_dx(subsz, 1);
-	image<Unit, 1> sub_dy(subsz, 1);
-	image<Unit, 1> sub_dst(subsz, 1);
+	image<Unit, 1> sub_dx(subsz);
+	image<Unit, 1> sub_dy(subsz);
+	image<Unit, 1> sub_dst(subsz);
 
 	DownFilter<DownKernel>::run_dx(to_ptr(sub_dx), dx);
 	DownFilter<DownKernel>::run_dy(to_ptr(sub_dy), dy);
@@ -348,9 +356,12 @@ void dxy_poisson_solver_inner(
 	unsigned int iteration_time,
 	int base_level)
 {
+	//copy(_dst, dy);
+	//return;
+
 	image<Unit,1> dbuf;
 	image_ptr<Unit,1> dst;
-	if (dst[0].data() == dx[0].data() || dst[0].data() == dy[0].data())
+	if (_dst.data() == dx.data() || _dst.data() == dy.data())
 	{
 		dbuf = image<Unit, 1>(size(_dst));
 		dst = dbuf;
@@ -387,7 +398,8 @@ void dxy_poisson_solver(
 	unsigned int iteration_time,
 	int base_level)
 {
-	if (dst.elm_size() == 16 && dx.elm_size() == 16 && dy.elm_size() == 16)
+
+	if (dst.elm_size() == 2)
 	{
 		dxy_poisson_solver_inner(
 			image_ptr<unsigned short, 1>(dst),
@@ -395,7 +407,7 @@ void dxy_poisson_solver(
 			image_ptr<unsigned short, 1>(dy),
 			iteration_time, base_level);
 	}
-	else if (dst.elm_size() == 32 && dx.elm_size() == 32 && dy.elm_size() == 32)
+	else if (dst.elm_size() == 4)
 	{
 		dxy_poisson_solver_inner(
 			image_ptr<float, 1>(dst),
