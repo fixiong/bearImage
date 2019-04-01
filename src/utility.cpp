@@ -1,16 +1,17 @@
 #include "../include/utility.h"
 
-static debug_callback_t callback = NULL;
+static debug_callback_t callback;
 
 void set_debug_callback(debug_callback_t _callback)
 {
 	callback = _callback;
 }
 
-void call_debug_callback(bear::dynamic_image_ptr img)
+void call_debug_callback(bear::dynamic_image_ptr img, bear::const_string_ptr flag)
 {
-	if (callback)
+	auto cb = callback;
+	if (cb)
 	{
-		callback(img);
+		cb(img, flag);
 	}
 }

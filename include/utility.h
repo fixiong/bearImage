@@ -2,12 +2,13 @@
 #define __UTILITY_HPP
 
 #include "../../bear/include/dynamic_image.h"
+#include "../../bear/include/functor.h"
 
-using debug_callback_t = void(*)(bear::dynamic_image_ptr);
+using debug_callback_t = bear::functor<void, bear::dynamic_image_ptr, bear::const_string_ptr>;
 
 void set_debug_callback(debug_callback_t callback);
 
-void call_debug_callback(bear::dynamic_image_ptr img);
+void call_debug_callback(bear::dynamic_image_ptr img, bear::const_string_ptr flag = bear::const_string_ptr());
 
 template<int SFT, typename T>
 inline T round_shift(T v)

@@ -1,4 +1,3 @@
-//#include <opencv2/opencv.hpp>
 #include <vector>
 #include <iostream>
 
@@ -12,16 +11,13 @@ using namespace cv;
 using namespace std;
 using namespace bear;
 
-void show_debug(dynamic_image_ptr _img)
-{
-	Mat img = _img;
-	imshow("dst", img);
-	waitKey();
-}
-
 int main(){
 
-	set_debug_callback(show_debug);
+	set_debug_callback([](dynamic_image_ptr _img, const_string_ptr) {
+		Mat img = _img;
+		imshow("dst", img);
+		waitKey();
+	});
 
 	printf("Main Entry\n");
 
@@ -60,7 +56,7 @@ int main(){
 	Mat dst(Size(tw, th), CV_8UC3, Scalar(0));
 
 	PStichingParam param;
-	param.iteration_time = 4;
+	param.iteration_time = 100;
 
 	poisson_stiching(dst, src, rd, F_BGR, param);
 
@@ -80,61 +76,3 @@ int main(){
 
     return 0;
 }
-
-
-
-
-// QImage img[4][3];
-
-//  for (int y = 0; y < 4; ++y)
-//  {
-//   for (int x = 0; x < 3; ++x)
-//   {
-//    QString fn = QString("C:\\work\\pictures\\Archive\\") + (char)('1' + x) + '_' + (char)('0' + y) + "_res.png";
-//    if (!img[y][x].load(fn)) //加载图像
-//    {
-//     QMessageBox::information(this,
-//      tr("打开图像失败"),
-//      tr("打开图像失败!"));
-//     return;
-//    }
-
-//    if (img[y][x].format() != QImage::Format_RGBA8888)
-//    {
-//     img[y][x] = img[y][x].convertToFormat(QImage::Format_RGBA8888, Qt::ColorOnly);
-//    }
-//   }
-//  }
-
-//  int w = bear::width(img[0][0]);
-//  int h = bear::height(img[0][0]);
-
-//  QImage dst(QSize(w * 3,h * 4), QImage::Format_RGBA8888);
-
-//  Image msk(w * 3, h * 4, 1, 8);
-
-//  for (int y = 0; y < 4; ++y)
-//  {
-//   for (int x = 0; x < 3; ++x)
-//   {
-//    PImage dm = clip_image(dst, x * w, (3 - y) * h, w, h);
-//    PImage sm = img[y][x];
-
-//    copy(dm, sm);
-
-//    PImage ms = clip_image(msk, x * w, (3 - y) * h, w, h);
-
-//    if ((x + y * 3) & 1)
-//    {
-//     zero(ms);
-//    }
-//    else
-//    {
-//     fill(ms, 0, (unsigned char)255);
-//    }
-//   }
-//  }
-
-//  poisson_stiching_merged(dst, dst, msk, F_RGBA, 5);
-
-//  ui.label->setPixmap(QPixmap::fromImage(dst));
