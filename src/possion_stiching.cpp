@@ -342,6 +342,8 @@ static void _poisson_stiching_m(
 			x_d_p(dst, img1, img2, ch, _ZERO_PS<Unit>());
 
 		});
+
+		call_debug_callback(dx);
 	},
 		[&src, &param, rd](image_ptr<Unit, 1> dy, int ch)
 	{

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <algorithm>
+#include "utility.h"
 #include "../../bear/include/dynamic_image.h"
 #include "../../bear/include/tensor.h"
 

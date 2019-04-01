@@ -12,14 +12,21 @@ using namespace cv;
 using namespace std;
 using namespace bear;
 
+void show_debug(dynamic_image_ptr _img)
+{
+	Mat img = _img;
+	imshow("dst", img);
+	waitKey();
+}
+
 int main(){
 
-
+	set_debug_callback(show_debug);
 
 	printf("Main Entry\n");
 
-	int tileX = 3, tileY = 4;
-	int rd = 3;
+	int tileX = 2, tileY = 2;
+	int rd = 2;
 
 	vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
 
@@ -28,11 +35,11 @@ int main(){
 	{
 		for (int y = 0; y < tileY; y++)
 		{
-			string name = "/Users/john/SandBox/done/12a06a1bb099fc8a770071471037a6a6.zip_t_";
+			string name = "c:/work/images/img_";
 			name += to_string(x);
 			name += '_';
 			name += to_string(y);
-			name += "_res.png";
+			name += ".png";
 			src[y][x] = imread(name.c_str());
 
 		}
@@ -47,24 +54,24 @@ int main(){
 
 	for (int y = 0; y < tileY; y++)
 	{
-		tw += src[y][0].rows - rd * 2;
+		th += src[y][0].rows - rd * 2;
 	}
 
 	Mat dst(Size(tw, th), CV_8UC3, Scalar(0));
 
 	PStichingParam param;
-	param.iteration_time = 100;
+	param.iteration_time = 4;
 
 	poisson_stiching(dst, src, rd, F_BGR, param);
 
-	vector<image_point> error;
+	//vector<image_point> error;
 
-	poisson_stiching_check(error, vector<image_point>(), src, rd, F_BGR, 8, 30);
+	//poisson_stiching_check(error, vector<image_point>(), src, rd, F_BGR, 8, 30);
 
-	for (int i = 0; i < (int)error.size(); ++i)
-	{
-		cout << "error block: (" << error[i].x << "," << error[i].y << ")" << endl;
-	}
+	//for (int i = 0; i < (int)error.size(); ++i)
+	//{
+	//	cout << "error block: (" << error[i].x << "," << error[i].y << ")" << endl;
+	//}
 
 	imshow("dst", dst);
 	waitKey();
