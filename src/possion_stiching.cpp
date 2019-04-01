@@ -594,8 +594,8 @@ void _poisson_stiching_check(
 	th_cv = th_cv * th_cv;
 	th_mse = th_mse * th_mse;
 
-	auto bw = width(src);
-	auto bh = height(src);
+	int bw = (int)width(src);
+	int bh = (int)height(src);
 
 	image<float, 1> dx(bw - 1, bh);
 	image<float, 1> dy(bw, bh - 1);

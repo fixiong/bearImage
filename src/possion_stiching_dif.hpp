@@ -138,7 +138,7 @@ static void y_d(
 {
 	dy.fill(zp.run());
 
-	for (int y = 1; y < height(src); ++y)
+	for (size_t y = 1; y < height(src); ++y)
 	{
 		auto drow = dy[y];
 		auto srow = src[y];
@@ -147,7 +147,7 @@ static void y_d(
 		auto srow_ = src[y - 1];
 		auto mrow_ = mask[y - 1];
 
-		for (int x = 0; x < width(src); ++x)
+		for (size_t x = 0; x < width(src); ++x)
 		{
 			bool f1 = 0 != mrow_[x];
 			bool f2 = 0 != mrow[x];

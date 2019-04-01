@@ -1,10 +1,14 @@
 //#include <opencv2/opencv.hpp>
-#include <types.h>
-#include <possion_stiching.h>
 #include <vector>
 #include <iostream>
 
-//using namespace cv;
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <string>
+
+#include "../include/possion_stiching.h"
+
+using namespace cv;
 using namespace std;
 using namespace bear;
 
@@ -12,55 +16,58 @@ int main(){
 
 
 
-	//printf("Main Entry\n");
+	printf("Main Entry\n");
 
-	//int tileX = 3, tileY = 4;
-	//int rd = 3;
+	int tileX = 3, tileY = 4;
+	int rd = 3;
 
-	//vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
+	vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
 
 
-	//for (int x = 0; x < tileX; x++)
-	//{
-	//	for (int y = 0; y < tileY; y++)
-	//	{
-	//		char path[128];
-	//		sprintf(path, "/Users/john/SandBox/done/12a06a1bb099fc8a770071471037a6a6.zip_t_%d_%d_res.png", x, y);
-	//		src[y][x] = imread(path);
+	for (int x = 0; x < tileX; x++)
+	{
+		for (int y = 0; y < tileY; y++)
+		{
+			string name = "/Users/john/SandBox/done/12a06a1bb099fc8a770071471037a6a6.zip_t_";
+			name += to_string(x);
+			name += '_';
+			name += to_string(y);
+			name += "_res.png";
+			src[y][x] = imread(name.c_str());
 
-	//	}
-	//}
-	//int tw = rd * 2;
-	//int th = rd * 2;
+		}
+	}
+	int tw = rd * 2;
+	int th = rd * 2;
 
-	//for (int x = 0; x < tileX; x++)
-	//{
-	//	tw += src[0][x].width - rd * 2;
-	//}
+	for (int x = 0; x < tileX; x++)
+	{
+		tw += src[0][x].cols - rd * 2;
+	}
 
-	//for (int y = 0; y < tileY; y++)
-	//{
-	//	tw += src[y][0].height - rd * 2;
-	//}
+	for (int y = 0; y < tileY; y++)
+	{
+		tw += src[y][0].rows - rd * 2;
+	}
 
-	//Mat dst(Size(tw, th), CV_8UC3, Scalar(0));
+	Mat dst(Size(tw, th), CV_8UC3, Scalar(0));
 
-	//PStichingParam param;
-	//param.iteration_time = 100;
+	PStichingParam param;
+	param.iteration_time = 100;
 
-	//poisson_stiching(dst, src, rd, F_BGR, 5, param);
+	poisson_stiching(dst, src, rd, F_BGR, param);
 
-	//vector<PPoint> error;
+	vector<image_point> error;
 
-	//poisson_stiching_check(error, vector<PPoint>(), src, rd, F_BGR, 8, 30);
+	poisson_stiching_check(error, vector<image_point>(), src, rd, F_BGR, 8, 30);
 
-	//for (int i = 0; i < (int)error.size(); ++i)
-	//{
-	//	cout << "error block: (" << error[i].x << "," << error[i].y << ")" << endl;
-	//}
+	for (int i = 0; i < (int)error.size(); ++i)
+	{
+		cout << "error block: (" << error[i].x << "," << error[i].y << ")" << endl;
+	}
 
-	//imshow("dst", dst);
-	//waitKey();
+	imshow("dst", dst);
+	waitKey();
 
 
 

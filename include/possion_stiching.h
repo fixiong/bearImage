@@ -40,12 +40,12 @@ struct PStichingVectorSrc
 	template<typename Src>
 	PStichingVectorSrc(Src &&_src)
 	{
-		int h = _src.size();
+		int h = (int)_src.size();
 		if (h <= 0)
 		{
 			throw bear::bear_exception(bear::exception_type::pointer_outof_range, "src is empty!");
 		}
-		int w = _src[0].size();
+		int w = (int)_src[0].size();
 
 		src = bear::tensor<bear::const_dynamic_image_ptr, 2>(h, w);
 
