@@ -57,14 +57,16 @@ struct Iteration<unsigned short>
 		image_ptr<unsigned short, 1> dst,
 		image_ptr<unsigned short, 1> dx,
 		image_ptr<unsigned short, 1> dy,
-		int iteration_time);
+		int iteration_time,
+		bool free);
 };
 
 void Iteration<unsigned short>::run(
 	image_ptr<unsigned short, 1> dst,
 	image_ptr<unsigned short, 1> dx,
 	image_ptr<unsigned short, 1> dy,
-	int iteration_time)
+	int iteration_time,
+	bool free)
 {
 	for (int k = 0; k<iteration_time; ++k)
 	{
@@ -92,60 +94,66 @@ void Iteration<unsigned short>::run(
 
 			if (0 == y)
 			{
-				size_t x = x_flag;
+				if (free)
+				{
+					size_t x = x_flag;
 
-				if (!x)
-				{
-					drow2[x] = limiteU16((int)(
-						32768 - xrow2[x + 1] + 32768 - yrow3[x]
-						+ drow2[x + 1] + drow3[x] + 1
-						) >> 1);
+					if (!x)
+					{
+						drow2[x] = limiteU16((int)(
+							32768 - xrow2[x + 1] + 32768 - yrow3[x]
+							+ drow2[x + 1] + drow3[x] + 1
+							) >> 1);
 
-					x += 2;
-				}
-				size_t mx = dst.width() - 1;
-				for (; x<mx; x += 2)
-				{
-					drow2[x] = limiteU16((int)(
-						xrow2[x] - xrow2[x + 1] + 32768 - yrow3[x]
-						+ drow2[x - 1] + drow2[x + 1] + drow3[x] + 2
-						) / 3);
-				}
-				if (x == mx)
-				{
-					drow2[x] = limiteU16((int)(
-						xrow2[x] - 32768 + 32768 - yrow3[x]
-						+ drow2[x - 1] + drow3[x] + 1
-						) >> 1);
+						x += 2;
+					}
+					size_t mx = dst.width() - 1;
+					for (; x<mx; x += 2)
+					{
+						drow2[x] = limiteU16((int)(
+							xrow2[x] - xrow2[x + 1] + 32768 - yrow3[x]
+							+ drow2[x - 1] + drow2[x + 1] + drow3[x] + 2
+							) / 3);
+					}
+					if (x == mx)
+					{
+						drow2[x] = limiteU16((int)(
+							xrow2[x] - 32768 + 32768 - yrow3[x]
+							+ drow2[x - 1] + drow3[x] + 1
+							) >> 1);
+					}
 				}
 			}
 			else if(dst.height() - 1 == y)
 			{
-				size_t x = x_flag;
+				if (free)
+				{
+					size_t x = x_flag;
 
-				if (!x)
-				{
-					drow2[x] = limiteU16((int)(
-						32768 - xrow2[x + 1] + yrow2[x] - 32768
-						+ drow2[x + 1] + drow1[x] + 1
-						) >> 1);
+					if (!x)
+					{
+						drow2[x] = limiteU16((int)(
+							32768 - xrow2[x + 1] + yrow2[x] - 32768
+							+ drow2[x + 1] + drow1[x] + 1
+							) >> 1);
 
-					x += 2;
-				}
-				size_t mx = dst.width() - 1;
-				for (; x<mx; x += 2)
-				{
-					drow2[x] = limiteU16((int)(
-						xrow2[x] - xrow2[x + 1] + yrow2[x] - 32768
-						+ drow2[x - 1] + drow2[x + 1] + drow1[x] + 2
-						) / 3);
-				}
-				if (x == mx)
-				{
-					drow2[x] = limiteU16((int)(
-						xrow2[x] - 32768 + yrow2[x] - 32768
-						+ drow2[x - 1] + drow1[x] + 1
-						) >> 1);
+						x += 2;
+					}
+					size_t mx = dst.width() - 1;
+					for (; x<mx; x += 2)
+					{
+						drow2[x] = limiteU16((int)(
+							xrow2[x] - xrow2[x + 1] + yrow2[x] - 32768
+							+ drow2[x - 1] + drow2[x + 1] + drow1[x] + 2
+							) / 3);
+					}
+					if (x == mx)
+					{
+						drow2[x] = limiteU16((int)(
+							xrow2[x] - 32768 + yrow2[x] - 32768
+							+ drow2[x - 1] + drow1[x] + 1
+							) >> 1);
+					}
 				}
 			}
 			else
@@ -154,10 +162,13 @@ void Iteration<unsigned short>::run(
 
 				if (!x)
 				{
-					drow2[x] = limiteU16((int)(
-						32768 - xrow2[x + 1] + yrow2[x] - yrow3[x]
-						+ drow2[x + 1] + drow1[x] + drow3[x] + 2
-						) / 3);
+					if (free)
+					{
+						drow2[x] = limiteU16((int)(
+							32768 - xrow2[x + 1] + yrow2[x] - yrow3[x]
+							+ drow2[x + 1] + drow1[x] + drow3[x] + 2
+							) / 3);
+					}
 
 					x += 2;
 				}
@@ -169,7 +180,7 @@ void Iteration<unsigned short>::run(
 						+ drow2[x - 1] + drow2[x + 1] + drow1[x] + drow3[x] + 2
 						) >> 2);
 				}
-				if (x == mx)
+				if (x == mx && free)
 				{
 					drow2[x] = limiteU16((int)(
 						xrow2[x] - 32768 + yrow2[x] - yrow3[x]
@@ -189,14 +200,16 @@ struct Iteration<float>
 		image_ptr<float, 1> dst,
 		image_ptr<float, 1> dx,
 		image_ptr<float, 1> dy,
-		int iteration_time);
+		int iteration_time,
+		bool free);
 };
 
 void Iteration<float>::run(
 	image_ptr<float, 1> dst,
 	image_ptr<float, 1> dx,
 	image_ptr<float, 1> dy,
-	int iteration_time)
+	int iteration_time,
+	bool free)
 {
 	image_ptr<float, 1> lp = dx;
 
@@ -251,44 +264,50 @@ void Iteration<float>::run(
 
 			if (0 == y)
 			{
-				size_t x = x_flag;
+				if (free)
+				{
+					size_t x = x_flag;
 
-				if (!x)
-				{
-					drow2[x] = (lprow[x] + drow2[x + 1] + drow3[x]) * 0.5f;
+					if (!x)
+					{
+						drow2[x] = (lprow[x] + drow2[x + 1] + drow3[x]) * 0.5f;
 
-					x += 2;
-				}
-				auto mx = dst.width() - 1;
-				for (; x<mx; x += 2)
-				{
-					drow2[x] = (lprow[x] +
-						drow2[x - 1] + drow2[x + 1] + drow3[x]) * (1.0f / 3.0f);
-				}
-				if (x == mx)
-				{
-					drow2[x] = (lprow[x] + drow2[x - 1] + drow3[x]) * 0.5f;
+						x += 2;
+					}
+					auto mx = dst.width() - 1;
+					for (; x<mx; x += 2)
+					{
+						drow2[x] = (lprow[x] +
+							drow2[x - 1] + drow2[x + 1] + drow3[x]) * (1.0f / 3.0f);
+					}
+					if (x == mx)
+					{
+						drow2[x] = (lprow[x] + drow2[x - 1] + drow3[x]) * 0.5f;
+					}
 				}
 			}
 			else if (dst.height() - 1 == y)
 			{
-				size_t x = x_flag;
+				if (free)
+				{
+					size_t x = x_flag;
 
-				if (!x)
-				{
-					drow2[x] = (lprow[x] + drow2[x + 1] + drow1[x]) * 0.5f;
+					if (!x)
+					{
+						drow2[x] = (lprow[x] + drow2[x + 1] + drow1[x]) * 0.5f;
 
-					x += 2;
-				}
-				auto mx = dst.width() - 1;
-				for (; x<mx; x += 2)
-				{
-					drow2[x] = (lprow[x] +
-						drow2[x - 1] + drow2[x + 1] + drow1[x]) * (1.0f / 3.0f);
-				}
-				if (x == mx)
-				{
-					drow2[x] = (lprow[x] + drow2[x - 1] + drow1[x]) * 0.5f;
+						x += 2;
+					}
+					auto mx = dst.width() - 1;
+					for (; x<mx; x += 2)
+					{
+						drow2[x] = (lprow[x] +
+							drow2[x - 1] + drow2[x + 1] + drow1[x]) * (1.0f / 3.0f);
+					}
+					if (x == mx)
+					{
+						drow2[x] = (lprow[x] + drow2[x - 1] + drow1[x]) * 0.5f;
+					}
 				}
 			}
 			else
@@ -297,8 +316,11 @@ void Iteration<float>::run(
 
 				if (!x)
 				{
-					drow2[x] = (lprow[x] +
-						drow2[x + 1] + drow1[x] + drow3[x]) * (1.0f / 3.0f);
+					if (free)
+					{
+						drow2[x] = (lprow[x] +
+							drow2[x + 1] + drow1[x] + drow3[x]) * (1.0f / 3.0f);
+					}
 
 					x += 2;
 				}
@@ -308,7 +330,7 @@ void Iteration<float>::run(
 					drow2[x] = (lprow[x] +
 						drow2[x - 1] + drow2[x + 1] + drow1[x] + drow3[x]) * 0.25f;
 				}
-				if (x == mx)
+				if (x == mx && free)
 				{
 					drow2[x] = (lprow[x] +
 						drow2[x - 1] + drow1[x] + drow3[x]) * (1.0f / 3.0f);
@@ -345,7 +367,7 @@ static void scale_recursion(
 
 	UpFilter<UpKernel>::run(dst,to_ptr(sub_dst));
 
-	Iteration<Unit>::run(dst, dx, dy, iteration_time);
+	Iteration<Unit>::run(dst, dx, dy, iteration_time, true);
 }
 
 
@@ -384,7 +406,13 @@ static void scale_recursion(
 
 	UpFilter<UpKernel>::run(dst, to_ptr(sub_dst));
 
-	Iteration<Unit>::run(dst, dx, dy, xborder, yborder, iteration_time);
+	copy(dst.clip(image_rectangle(0, 0, 1, dst.height())), xborder.clip(0, 0, 1, xborder.height()));
+	copy(dst.clip(image_rectangle(dst.width() - 1, 0, 1, dst.height())), xborder.clip(1, 0, 1, xborder.height()));
+
+	copy(dst.clip(image_rectangle(0, 0, dst.width(), 1)), xborder.clip(0, 0, xborder.width(), 1));
+	copy(dst.clip(image_rectangle(0, dst.height() - 1, dst.width(), 1)), xborder.clip(0, 1, xborder.width(), 1));
+
+	Iteration<Unit>::run(dst, dx, dy, iteration_time, false);
 }
 
 template<typename Unit>
@@ -427,7 +455,14 @@ void dxy_poisson_solver_inner(
 
 	level = std::max(1, level);
 
-	scale_recursion(dst, dx, dy, iteration_time, level);
+	if (0 == xborder.height() || 0 == yborder.height())
+	{
+		scale_recursion(dst, dx, dy, iteration_time, level);
+	}
+	else
+	{
+		scale_recursion(dst, dx, dy, xborder, yborder, iteration_time, level);
+	}
 
 	if (dbuf.size())copy(_dst, dst);
 }

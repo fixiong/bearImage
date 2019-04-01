@@ -474,7 +474,7 @@ struct _DownFilter
 				{
 					DL::run(buf[j], src[0]);
 				}
-				else if ((size_t)s >= sh)
+				else if (s >= (pos_t)sh)
 				{
 					DL::run(buf[j], src[sh - 1]);
 				}
@@ -485,10 +485,9 @@ struct _DownFilter
 				++s;
 			}
 
-			size_t dw = dst.width();
 			auto drow = dst[i];
 
-			for (size_t j = 0; j<dw; ++j)
+			for (size_t j = 0; j<dst.width(); ++j)
 			{
 				std::forward<C>(c)(drow[j], KernelADP<Size, K>::run_vt(buf, j));
 			}
@@ -545,7 +544,7 @@ struct _DownFilter
 				{
 					buf[j].fill(_ZERO_UNIT<Unit>::run());
 				}
-				else if ((size_t)s >= sh)
+				else if (s >= (pos_t)sh)
 				{
 					buf[j].fill(_ZERO_UNIT<Unit>::run());
 				}
@@ -556,10 +555,9 @@ struct _DownFilter
 				++s;
 			}
 
-			size_t dw = dst.width();
 			auto drow = dst[i];
 
-			for (size_t j = 0; j<dw; ++j)
+			for (size_t j = 0; j<dst.width(); ++j)
 			{
 				std::forward<C>(c)(drow[j], _ZERO_UNIT<Unit>::to_zero(KernelADP<_Size, _K>::run_vt(buf, j)));
 			}
@@ -576,14 +574,10 @@ struct _DownFilter
 		using Unit = typename Image::elm_type;
 
 		array_ptr<Unit> buf[Size];
-		for (int i = 0; i < Size; ++i)
-		{
-			buf[i] = bufs[i];
-		}
 
 		for (int j = 0; j < Size - 2; ++j)
 		{
-			DL::run(buf[j], src[0]);
+			buf[j] = src[0];
 		}
 
 		size_t sh = src.height();
@@ -592,34 +586,45 @@ struct _DownFilter
 
 		for (size_t y = 0; y < dst.height(); ++y)
 		{
-
-
 			for (size_t x = Size - 2; x < Size; ++x)
 			{
 				if (s < 0)
 				{
-					DL::run(buf[j], src[0]);
+					buf[y] = src[0];
 				}
-				else if ((size_t)s >= sh)
+				else if (s >= (pos_t)sh)
 				{
-					DL::run(buf[j], src[sh - 1]);
+					buf[y] = src[sh - 1];
 				}
 				else
 				{
-					DL::run(buf[j], src[s]);
+					buf[y] = src[s];
 				}
 				++s;
 			}
 
-			size_t dw = dst.width();
-			auto drow = dst[i];
+			auto drow = dst[y];
 
-			for (size_t j = 0; j < dw; ++j)
+			for (size_t x = 0; x < dst.width(); ++x)
 			{
-				std::forward<C>(c)(drow[j], KernelADP<Size, K>::run_vt(buf, j));
+				std::forward<C>(c)(drow[x], KernelADP<Size, K>::run_vt(buf, x));
 			}
 
 			roll_buf<Size>(buf);
+		}
+	}
+
+
+	template<typename Image, typename C = Dfc>
+	static void run_by(Image dst, Image src, C &&c = Dfc())
+	{
+		using Unit = typename Image::elm_type;
+
+		typedef _DOWN_LINE<false, K> DL;
+
+		for (size_t y = 0; y < dst.height(); ++y)
+		{
+			DL::run(dst[y], src[y]);
 		}
 	}
 
