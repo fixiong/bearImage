@@ -58,7 +58,14 @@ int main(){
 	PStichingParam param;
 	param.iteration_time = 100;
 
-	poisson_stiching(dst, src, rd, F_BGR, param);
+	try
+	{
+		poisson_stiching(dst, src, rd, F_BGR, param);
+	}
+	catch (const bear_exception & e)
+	{
+		cout << e.what() << endl;
+	}
 
 	//vector<image_point> error;
 

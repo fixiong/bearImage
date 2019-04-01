@@ -567,6 +567,62 @@ struct _DownFilter
 			roll_buf<_Size>(buf);
 		}
 	}
+
+
+
+	template<typename Image, typename C = Dfc>
+	static void run_bx(Image dst, Image src, C &&c = Dfc())
+	{
+		using Unit = typename Image::elm_type;
+
+		array_ptr<Unit> buf[Size];
+		for (int i = 0; i < Size; ++i)
+		{
+			buf[i] = bufs[i];
+		}
+
+		for (int j = 0; j < Size - 2; ++j)
+		{
+			DL::run(buf[j], src[0]);
+		}
+
+		size_t sh = src.height();
+
+		pos_t s = -1;
+
+		for (size_t y = 0; y < dst.height(); ++y)
+		{
+
+
+			for (size_t x = Size - 2; x < Size; ++x)
+			{
+				if (s < 0)
+				{
+					DL::run(buf[j], src[0]);
+				}
+				else if ((size_t)s >= sh)
+				{
+					DL::run(buf[j], src[sh - 1]);
+				}
+				else
+				{
+					DL::run(buf[j], src[s]);
+				}
+				++s;
+			}
+
+			size_t dw = dst.width();
+			auto drow = dst[i];
+
+			for (size_t j = 0; j < dw; ++j)
+			{
+				std::forward<C>(c)(drow[j], KernelADP<Size, K>::run_vt(buf, j));
+			}
+
+			roll_buf<Size>(buf);
+		}
+	}
+
 };
 
 template<typename Kernel>

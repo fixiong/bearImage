@@ -348,11 +348,52 @@ static void scale_recursion(
 	Iteration<Unit>::run(dst, dx, dy, iteration_time);
 }
 
+
+template<typename Unit>
+static void scale_recursion(
+	image_ptr<Unit, 1> dst,
+	image_ptr<Unit, 1> dx,
+	image_ptr<Unit, 1> dy,
+	image_ptr<Unit, 1> xborder,
+	image_ptr<Unit, 1> yborder,
+	int iteration_time, unsigned int n_layer)
+{
+	if (!n_layer)
+	{
+		dst.fill(_ZERO_UNIT<Unit>::run());
+		return;
+	}
+
+	auto subsz = size_down<5>(size(dst));
+
+	image<Unit, 1> sub_dx(subsz);
+	image<Unit, 1> sub_dy(subsz);
+	image<Unit, 1> sub_dst(subsz);
+	image<Unit, 1> sub_xborder(2, subsz.height);
+	image<Unit, 1> sub_yborder(subsz.width, 2);
+
+	DownFilter<DownKernel>::run_dx(to_ptr(sub_dx), dx);
+	DownFilter<DownKernel>::run_dy(to_ptr(sub_dy), dy);
+
+
+	DownFilter<DownKernel>::run_bx(to_ptr(sub_xborder), xborder);
+	DownFilter<DownKernel>::run_by(to_ptr(sub_yborder), yborder);
+
+
+	scale_recursion<Unit>(sub_dst, sub_dx, sub_dy, sub_xborder, sub_yborder, iteration_time, n_layer - 1);
+
+	UpFilter<UpKernel>::run(dst, to_ptr(sub_dst));
+
+	Iteration<Unit>::run(dst, dx, dy, xborder, yborder, iteration_time);
+}
+
 template<typename Unit>
 void dxy_poisson_solver_inner(
 	image_ptr<Unit, 1> _dst,
 	image_ptr<Unit, 1> dx,
 	image_ptr<Unit, 1> dy,
+	image_ptr<Unit, 1> xborder,
+	image_ptr<Unit, 1> yborder,
 	unsigned int iteration_time,
 	int base_level)
 {
@@ -405,6 +446,8 @@ void dxy_poisson_solver(
 			image_ptr<unsigned short, 1>(dst),
 			image_ptr<unsigned short, 1>(dx),
 			image_ptr<unsigned short, 1>(dy),
+			image_ptr<unsigned short, 1>(),
+			image_ptr<unsigned short, 1>(),
 			iteration_time, base_level);
 	}
 	else if (dst.elm_size() == 4)
@@ -413,6 +456,44 @@ void dxy_poisson_solver(
 			image_ptr<float, 1>(dst),
 			image_ptr<float, 1>(dx),
 			image_ptr<float, 1>(dy),
+			image_ptr<float, 1>(),
+			image_ptr<float, 1>(),
+			iteration_time, base_level);
+	}
+	else
+	{
+		throw bear_exception(exception_type::other_error, "unsupported image type!");
+	}
+}
+
+
+void dxy_poisson_solver(
+	bear::dynamic_image_ptr dst,
+	bear::dynamic_image_ptr dx,
+	bear::dynamic_image_ptr dy,
+	bear::dynamic_image_ptr xborder,
+	bear::dynamic_image_ptr yborder,
+	unsigned int iteration_time,
+	int base_level)
+{
+	if (dst.elm_size() == 2)
+	{
+		dxy_poisson_solver_inner(
+			image_ptr<unsigned short, 1>(dst),
+			image_ptr<unsigned short, 1>(dx),
+			image_ptr<unsigned short, 1>(dy),
+			image_ptr<unsigned short, 1>(xborder),
+			image_ptr<unsigned short, 1>(yborder),
+			iteration_time, base_level);
+	}
+	else if (dst.elm_size() == 4)
+	{
+		dxy_poisson_solver_inner(
+			image_ptr<float, 1>(dst),
+			image_ptr<float, 1>(dx),
+			image_ptr<float, 1>(dy),
+			image_ptr<float, 1>(xborder),
+			image_ptr<float, 1>(yborder),
 			iteration_time, base_level);
 	}
 	else
