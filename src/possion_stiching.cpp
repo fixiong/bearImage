@@ -632,7 +632,7 @@ static void covariance(
 {
 	using Unit = typename Image::elm_type;
 
-	int chl[] =
+	unsigned int chl[] =
 	{
 		FI_RED(format),
 		FI_GREEN(format),
