@@ -2,7 +2,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 PROJECT(test)
 
 find_package(OpenCV REQUIRED)
-find_package(bear REQUIRED)
 
 message(STATUS "OpenCV library status:")
 message(STATUS "    version: ${OpenCV_VERSION}")
