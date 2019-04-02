@@ -7,6 +7,13 @@
 #include "../../bear/include/dynamic_image.h"
 #include "../../bear/include/tensor.h"
 
+enum PossionConstrain
+{
+	PossionNoConstrain,
+	PossionEstimateConstrain,
+	PossionPanoramaConstrain,
+};
+
 struct PStichingParam
 {
 	int max_grandient = -1;
@@ -17,6 +24,7 @@ struct PStichingParam
 	bool edge_restriction = false;
 	float edge_smooth = 1.0f;
 
+	PossionConstrain constrain = PossionNoConstrain;
 };
 
 void poisson_stiching_merged(

@@ -38,7 +38,9 @@ static void y_d(const image_ptr<unsigned short, 1> &img)
 
 
 template<typename T>
-struct _ZERO_PS {};
+struct _ZERO_PS 
+{
+};
 
 template<>
 struct _ZERO_PS<float>
@@ -46,6 +48,21 @@ struct _ZERO_PS<float>
 	constexpr static float run()
 	{
 		return 0.0f;
+	}
+
+	static float limite(float v)
+	{
+		return v;
+	}
+
+	static float minus(float v)
+	{
+		return -v;
+	}
+
+	static float acc(float v1, float v2)
+	{
+		return v1 + v2;
 	}
 
 	static float from_unit(unsigned char v1,unsigned char v2)
@@ -75,6 +92,21 @@ struct _ZERO_PS<unsigned short>
 	constexpr static unsigned short run()
 	{
 		return 32768;
+	}
+
+	static unsigned short limite(int v)
+	{
+		return limiteU16(v + 32768);
+	}
+
+	static unsigned short minus(unsigned short v)
+	{
+		return 65536 - v;
+	}
+
+	static int acc(int v1, int v2)
+	{
+		return v1 + v2 - 32768;
 	}
 
 	static unsigned short from_unit(unsigned char v1, unsigned char v2)

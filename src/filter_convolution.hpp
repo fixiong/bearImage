@@ -590,15 +590,15 @@ struct _DownFilter
 			{
 				if (s < 0)
 				{
-					buf[y] = src[0];
+					buf[x] = src[0];
 				}
 				else if (s >= (pos_t)sh)
 				{
-					buf[y] = src[sh - 1];
+					buf[x] = src[sh - 1];
 				}
 				else
 				{
-					buf[y] = src[s];
+					buf[x] = src[s];
 				}
 				++s;
 			}

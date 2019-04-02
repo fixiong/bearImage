@@ -9,6 +9,7 @@
 
 #include "../include/utility.h"
 #include "../../bear/include/ptr_algorism.h"
+#include "../../bear/include/ptr_numeric.h"
 
 #include "possion_stiching_dif.hpp"
 
@@ -93,6 +94,37 @@ static void stiching(Image dst, Ds ds, unsigned int ch)
 	}, dst, ds);
 }
 
+template<typename Unit, typename Array>
+static void estimate_border(Array &db, bool ring)
+{
+	using CT = decltype(db[0] + db[0]);
+	vector<CT> acc(db.size());
+
+	acc[0] = db[0];
+
+	for (int i = 1; i < (int)db.size(); ++i)
+	{
+		acc[i] = _ZERO_PS<Unit>::acc(acc[i - 1], db[i]);
+	}
+
+	if (ring)
+	{
+		auto er = _ZERO_PS<Unit>::run() - acc.back();
+
+		for (int i = 0; i < (int)db.size(); ++i)
+		{
+			acc[i] += er * (i + 1) / (int)db.size();
+		}
+	}
+
+	auto avg = accumulate(acc.begin(), acc.end(), (CT)0) / (int)db.size();
+
+	map_function([avg](Unit &d, CT s)
+	{
+		d = _ZERO_PS<Unit>::limite(s - avg);
+	}, db, acc);
+}
+
 
 template<typename Unit, typename Image, typename Dx, typename Dy>
 static void _poisson_stiching_inner(
@@ -117,7 +149,90 @@ static void _poisson_stiching_inner(
 		std::forward<Dx>(get_dx)(dx, chl[i]);
 		std::forward<Dy>(get_dy)(dy, chl[i]);
 
-		dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+		if (param.constrain == PossionNoConstrain)
+		{
+			dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+		}
+		else
+		{
+			int w = (int)width(dst);
+			int h = (int)height(dst);
+			image<Unit, 1> bx(2, h);
+			image<Unit, 1> by(w, 2);
+
+
+			if (param.constrain == PossionPanoramaConstrain)
+			{
+				vector<Unit> bd1(h);
+				vector<Unit> bd2(h);
+
+				for (int y = 0; y < h; ++y)
+				{
+					bd1[y] = dy[y][0];
+					bd2[y] = dy[y][w - 1];
+				}
+
+				map_function([](Unit &v1, Unit v2) {
+					v1 = (v1 + v2) / 2;
+				}, bd1, bd2);
+
+				estimate_border<Unit>(bd1, false);
+
+				for (int y = 0; y < h; ++y)
+				{
+					bx[y][0] = bx[y][1] = bd1[y];
+				}
+
+				by[0].fill(bd1[0]);
+				by[1].fill(bd1.back());
+			}
+			else
+			{
+				vector<Unit> bd(w * 2 + h * 2 - 4);
+
+				copy(to_ptr(bd).clip(0, w), dx[0]);
+
+				for (int y = 1; y < h; ++y)
+				{
+					bd[w - 1 + y] = dy[y][w - 1];
+				}
+
+				for (int x = 1; x < w; ++x)
+				{
+					bd[w + h - 2 + x] = _ZERO_PS<Unit>::minus(dx[h - 1][w - x]);
+				}
+
+				for (int y = 1; y < h - 1; ++y)
+				{
+					bd[w * 2 + h - 3 + y] = _ZERO_PS<Unit>::minus(dx[h - y][0]);
+				}
+
+				bd[0] = _ZERO_PS<Unit>::minus(dx[1][0]);
+
+				estimate_border<Unit>(bd, true);
+
+				copy(by[0], to_ptr(bd).clip(0, w));
+
+				for (int y = 0; y < h; ++y)
+				{
+					bx[y][1] = bd[w - 1 + y];
+				}
+
+				for (int x = 0; x < w; ++x)
+				{
+					by[1][w - 1 - x] = bd[w + h - 2 + x];
+				}
+
+				for (int y = 0; y < h - 1; ++y)
+				{
+					bx[h - 1 - y][0] = bd[w * 2 + h - 3 + y];
+				}
+
+				bx[0][0] = bd[0];
+			}
+			dxy_poisson_solver(ds, dx, dy, bx, by, param.iteration_time, param.base_level);
+		}
+
 
 		stiching(dst, ds, chl[i]);
 	}

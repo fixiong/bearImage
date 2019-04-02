@@ -409,8 +409,8 @@ static void scale_recursion(
 	copy(dst.clip(image_rectangle(0, 0, 1, dst.height())), xborder.clip(0, 0, 1, xborder.height()));
 	copy(dst.clip(image_rectangle(dst.width() - 1, 0, 1, dst.height())), xborder.clip(1, 0, 1, xborder.height()));
 
-	copy(dst.clip(image_rectangle(0, 0, dst.width(), 1)), xborder.clip(0, 0, xborder.width(), 1));
-	copy(dst.clip(image_rectangle(0, dst.height() - 1, dst.width(), 1)), xborder.clip(0, 1, xborder.width(), 1));
+	copy(dst.clip(image_rectangle(0, 0, dst.width(), 1)), yborder.clip(0, 0, yborder.width(), 1));
+	copy(dst.clip(image_rectangle(0, dst.height() - 1, dst.width(), 1)), yborder.clip(0, 1, yborder.width(), 1));
 
 	Iteration<Unit>::run(dst, dx, dy, iteration_time, false);
 }
@@ -474,6 +474,14 @@ void dxy_poisson_solver(
 	unsigned int iteration_time,
 	int base_level)
 {
+	if (
+		dst.width() != dx.width() ||
+		dst.height() != dx.height() ||
+		dst.width() != dy.width() ||
+		dst.height() != dy.height())
+	{
+		throw bear_exception(exception_type::size_different, "wrong input image size!");
+	}
 
 	if (dst.elm_size() == 2)
 	{
@@ -511,6 +519,18 @@ void dxy_poisson_solver(
 	unsigned int iteration_time,
 	int base_level)
 {
+	if (xborder.width() != 2 ||
+		xborder.height() != dst.height() ||
+		yborder.width() != dst.width() ||
+		yborder.height() != 2 ||
+		dst.width() != dx.width() ||
+		dst.height() != dx.height() ||
+		dst.width() != dy.width() ||
+		dst.height() != dy.height())
+	{
+		throw bear_exception(exception_type::size_different, "wrong input image size!");
+	}
+
 	if (dst.elm_size() == 2)
 	{
 		dxy_poisson_solver_inner(
