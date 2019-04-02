@@ -16,7 +16,7 @@ message("${BEAR_DIR}")
 INCLUDE_DIRECTORIES(                          
      include
      ${OPENCV_INCLUDE_DIR}
-     ${BEAR_DIR}
+     ../bear/include
      )
 
 SET(SRC_FILES 
