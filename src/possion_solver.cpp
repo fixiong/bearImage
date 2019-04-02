@@ -2,7 +2,7 @@
 #include "../include/utility.h"
 #include "filter_convolution.hpp"
 
-#include "../../bear/include/ptr_algorism.h"
+#include "bear/ptr_algorism.h"
 
 #include <cmath>
 #include <algorithm>

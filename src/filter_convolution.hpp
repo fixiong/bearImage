@@ -1,7 +1,7 @@
 #ifndef __FILTERS_CONVOLUTION_HPP
 #define __FILTERS_CONVOLUTION_HPP
 
-#include "../../bear/include/image.h"
+#include <bear/image.h>
 
 #include <vector>
 #include <utility>

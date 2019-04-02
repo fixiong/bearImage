@@ -1,7 +1,7 @@
 #ifndef _POSSION_STICHING_DIF_HPP
 #define _POSSION_STICHING_DIF_HPP
 
-#include "../../bear/include/image.h"
+#include <bear/image.h>
 
 
 using namespace bear;

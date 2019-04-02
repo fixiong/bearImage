@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "../include/utility.h"
-#include "../../bear/include/ptr_algorism.h"
-#include "../../bear/include/ptr_numeric.h"
+#include <bear/ptr_algorism.h>
+#include <bear/ptr_numeric.h>
 
 #include "possion_stiching_dif.hpp"
 

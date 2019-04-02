@@ -1,8 +1,8 @@
 #ifndef __UTILITY_HPP
 #define __UTILITY_HPP
 
-#include "../../bear/include/dynamic_image.h"
-#include "../../bear/include/functor.h"
+#include <bear/dynamic_image.h>
+#include <bear/functor.h>
 
 using debug_callback_t = bear::functor<void, bear::dynamic_image_ptr, bear::const_string_ptr>;
 

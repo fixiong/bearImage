@@ -59,15 +59,15 @@ int main(){
 	param.iteration_time = 100;
 	param.constrain = PossionEstimateConstrain;
 
-	//try
-	//{
+	try
+	{
 		poisson_stiching(dst, src, rd, F_BGR, param);
-	//}
-	//catch (const bear_exception & e)
-	//{
-	//	cout << e.what() << endl;
-	//	exit(0);
-	//}
+	}
+	catch (const bear_exception & e)
+	{
+		cout << e.what() << endl;
+		exit(0);
+	}
 
 	//vector<image_point> error;
 

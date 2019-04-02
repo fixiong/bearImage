@@ -1,7 +1,7 @@
 #ifndef _POSSION_SOLVER_H
 #define _POSSION_SOLVER_H
 
-#include "../../bear/include/dynamic_image.h"
+#include <bear/dynamic_image.h>
 
 void dxy_poisson_solver(
 	bear::dynamic_image_ptr dst,
