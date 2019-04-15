@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 	typedef void* imagePtr;
-	typedef void* matImagePtr;
+	typedef void* matImagePtr; 
 	void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr,unsigned int rd,unsigned int format);
 
 	imagePtr newImagePtr(std::size_t width, std::size_t height, std::size_t channel_size, unsigned int eletype, std::size_t ele_size, char* data, std::size_t width_step);
