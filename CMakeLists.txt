@@ -1,20 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
-PROJECT(test)
+PROJECT(bearimage)
 
-find_package(OpenCV REQUIRED)
-
-message(STATUS "OpenCV library status:")
-message(STATUS "    version: ${OpenCV_VERSION}")
-message(STATUS "    libraries: ${OpenCV_LIBS}")
-message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
-
-message("${OPENCV_LIBRARIES}")
 message("${BEAR_DIR}")
 
 
 INCLUDE_DIRECTORIES(                          
      include
-     ${OPENCV_INCLUDE_DIR}
      ../bear/include
      )
 
@@ -22,11 +13,10 @@ SET(SRC_FILES
 src/utility.cpp
 src/possion_solver.cpp
 src/possion_stiching.cpp
-test/main.cpp
+src/possion_wrap.cpp
 )
 
 add_definitions(-std=c++14)
 
-add_executable(${PROJECT_NAME} ${SRC_FILES})
+add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OpenCV_LIBS})
