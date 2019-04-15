@@ -18,5 +18,5 @@ src/possion_wrap.cpp
 
 add_definitions(-std=c++14)
 
-add_library(${PROJECT_NAME} ${SRC_FILES})
+add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
