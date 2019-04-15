@@ -21,7 +21,7 @@ int main(){
 
 	printf("Main Entry\n");
 
-	int tileX = 2, tileY = 2;
+	int tileX = 1, tileY = 150;
 	int rd = 2;
 
 	vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
@@ -31,11 +31,11 @@ int main(){
 	{
 		for (int y = 0; y < tileY; y++)
 		{
-			string name = "c:/work/images/img_";
+			string name = "C:\\work\\images\\result_";
 			name += to_string(x);
 			name += '_';
 			name += to_string(y);
-			name += ".png";
+			name += "\\channels\\ctemp_0.png";
 			src[y][x] = imread(name.c_str());
 
 		}
@@ -57,7 +57,7 @@ int main(){
 
 	PStichingParam param;
 	param.iteration_time = 100;
-	param.constrain = PossionEstimateConstrain;
+	param.constrain = PossionPanoramaConstrain;
 
 	try
 	{
@@ -79,6 +79,7 @@ int main(){
 	//}
 
 	imshow("dst", dst);
+	imwrite("c:\\work\\result.png", dst);
 	waitKey();
 
 
