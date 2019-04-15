@@ -16,7 +16,7 @@ void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, u
 	poisson_stiching(*dst, *src, rd, format, param);
 
 }
-imagePtr newImagePtr(size_t width, size_t height, size_t channel_size, unsigned int eletype, size_t ele_size, char* data, size_t width_step)
+imagePtr newImagePtr(unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step)
 {
 	auto re = new bear::dynamic_image_ptr(width,height, channel_size, bear::data_type(eletype), ele_size, data, width_step);
 	return (void*)re;
@@ -32,7 +32,7 @@ matImagePtr newMatImagePtr(unsigned int y_max)
 	return (void*)re;
 }
 
-void matPushImage(matImagePtr m,unsigned int y, size_t width, size_t height, size_t channel_size, unsigned int eletype, size_t ele_size, char* data, size_t width_step)
+void matPushImage(matImagePtr m,unsigned int y, unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step)
 {
 	bear::dynamic_image_ptr image(width, height, channel_size, bear::data_type(eletype), ele_size, data, width_step);
 	auto v = (std::vector<std::vector<bear::dynamic_image_ptr>>*)m;

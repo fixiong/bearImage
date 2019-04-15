@@ -1,8 +1,6 @@
 #ifndef _POSSION_WRAP_H
 #define _POSSION_WRAP_H
 
-#include <utility>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -10,11 +8,11 @@ extern "C" {
 	typedef void* matImagePtr; 
 	void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr,unsigned int rd,unsigned int format);
 
-	imagePtr newImagePtr(std::size_t width, std::size_t height, std::size_t channel_size, unsigned int eletype, std::size_t ele_size, char* data, std::size_t width_step);
+	imagePtr newImagePtr(unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step);
 	void freeImagePtr(imagePtr p);
 
 	matImagePtr newMatImagePtr(unsigned int y_max);
-	void matPushImage(matImagePtr m,unsigned int y, std::size_t width, std::size_t height, std::size_t channel_size, unsigned int eletype, std::size_t ele_size, char* data, std::size_t width_step);
+	void matPushImage(matImagePtr m,unsigned int y, unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step);
 	void freeMat(matImagePtr m);
 
 
