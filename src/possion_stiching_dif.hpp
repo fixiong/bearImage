@@ -126,7 +126,7 @@ struct _ZERO_PS<unsigned short>
 
 	static void to_unit(unsigned short &dst, unsigned short v)
 	{
-		dst = limiteU8(dst - ((int)(v << 1) - 65535));
+		dst = limiteU16(dst - ((int)(v << 1) - 65535));
 	}
 };
 

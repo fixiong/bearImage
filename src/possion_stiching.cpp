@@ -152,6 +152,7 @@ static void _poisson_stiching_inner(
 		if (param.constrain == PossionNoConstrain)
 		{
 			dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+
 		}
 		else
 		{
@@ -430,7 +431,6 @@ static void _poisson_stiching_m(
 	unsigned int format,
 	PStichingParam param)
 {
-
 	_poisson_stiching_inner<Unit>(
 		dst,
 		[&src, &param, rd](image_ptr<Unit,1> dx, int ch)

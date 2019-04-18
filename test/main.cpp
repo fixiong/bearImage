@@ -15,13 +15,13 @@ int main(){
 
 	set_debug_callback([](dynamic_image_ptr _img, const_string_ptr) {
 		Mat img = _img;
-		imshow("dst", img);
+		imshow("debug", img);
 		waitKey();
 	});
 
 	printf("Main Entry\n");
 
-	int tileX = 1, tileY = 150;
+	int tileX = 2, tileY = 2;
 	int rd = 2;
 
 	vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
@@ -31,13 +31,12 @@ int main(){
 	{
 		for (int y = 0; y < tileY; y++)
 		{
-			string name = "C:\\work\\images\\result_";
+			string name = "C:\\work\\images\\_";
 			name += to_string(x);
 			name += '_';
 			name += to_string(y);
 			name += "\\channels\\ctemp_0.png";
-			src[y][x] = imread(name.c_str());
-
+			src[y][x] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
 		}
 	}
 	int tw = rd * 2;
@@ -53,11 +52,11 @@ int main(){
 		th += src[y][0].rows - rd * 2;
 	}
 
-	Mat dst(Size(tw, th), CV_8UC3, Scalar(0));
+	Mat dst(Size(tw, th), CV_16UC3, Scalar(0));
 
 	PStichingParam param;
 	param.iteration_time = 100;
-	param.constrain = PossionPanoramaConstrain;
+	param.constrain = PossionNoConstrain;
 
 	try
 	{
@@ -78,7 +77,7 @@ int main(){
 	//	cout << "error block: (" << error[i].x << "," << error[i].y << ")" << endl;
 	//}
 
-	imshow("dst", dst);
+	imshow("aaa", dst);
 	imwrite("c:\\work\\result.png", dst);
 	waitKey();
 
