@@ -11,7 +11,16 @@ void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, u
 	PStichingParam param;
 
 	param.iteration_time = 100;
-	param.constrain = PossionEstimateConstrain;
+
+	if src.front().size() == 1
+	{
+		param.constrain = PossionPanoramaConstrain;
+	}
+	else
+	{
+		param.constrain = PossionNoConstrain;
+	}
+
 
 	poisson_stiching(*dst, *src, rd, format, param);
 
