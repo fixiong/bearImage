@@ -12,7 +12,7 @@ extern "C" {
 	void freeImagePtr(imagePtr p);
 
 	matImagePtr newMatImagePtr(unsigned int y_max);
-	void matPushImage(matImagePtr m,unsigned int y, unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step);
+	unsigned int matPushImage(matImagePtr m,unsigned int y, unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step);
 	void freeMat(matImagePtr m);
 
 
