@@ -1,55 +1,77 @@
 #include "../include/possion_stiching.h"
 #include "../include/possion_wrap.h"
 #include "../include/bear/dynamic_image.h"
+#include <iostream>
+#include <string>
 
 void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, unsigned int format)
 {
-	auto src = (std::vector<std::vector<bear::dynamic_image_ptr>>*) srcPtr;
-	auto dst = (bear::dynamic_image_ptr*) dstPtr;
-	
+	try {
+		std::vector<std::vector<bear::dynamic_image_ptr>>* src = (std::vector<std::vector<bear::dynamic_image_ptr>>*) srcPtr;
+		bear::dynamic_image_ptr* dst = (bear::dynamic_image_ptr*) dstPtr;
 
-	PStichingParam param;
 
-	param.iteration_time = 100;
+		PStichingParam param;
 
-	if src.front().size() == 1
-	{
-		param.constrain = PossionPanoramaConstrain;
+		param.iteration_time = 100;
+		if (src.front().size() == 1)
+		{
+			param.constrain = PossionPanoramaConstrain;
+		}
+		else
+		{
+			param.constrain = PossionNoConstrain;
+		}
+
+		poisson_stiching(*dst, *src, rd, F_RGBA, param);
 	}
-	else
-	{
-		param.constrain = PossionNoConstrain;
+	catch (bear::bear_exception e) {
+		std::cout<<e.what()<<std::endl;
 	}
-
-
-	poisson_stiching(*dst, *src, rd, format, param);
-
 }
 imagePtr newImagePtr(unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step)
 {
-	auto re = new bear::dynamic_image_ptr(width,height, channel_size, bear::data_type(eletype), ele_size, data, width_step);
+
+	bear::dynamic_image_ptr* re;
+
+	re = new bear::dynamic_image_ptr(width, height, channel_size, bear::data_type(eletype), ele_size, data, width_step);
+
+
 	return (void*)re;
 }
 void freeImagePtr(imagePtr p)
 {
-	auto dip = (bear::dynamic_image_ptr*)p;
+	bear::dynamic_image_ptr* dip = (bear::dynamic_image_ptr*)p;
 	delete dip;
 }
 matImagePtr newMatImagePtr(unsigned int y_max) 
 {
-	auto re = new std::vector<std::vector<bear::dynamic_image_ptr>>(y_max);
+
+	std::vector<std::vector<bear::dynamic_image_ptr>>* re = new std::vector<std::vector<bear::dynamic_image_ptr>>(y_max);
+
+	//(*re)[0].push_back(image);
+
 	return (void*)re;
 }
 
-void matPushImage(matImagePtr m,unsigned int y, unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step)
+unsigned int matPushImage(matImagePtr m,unsigned int y, unsigned long long width, unsigned long long height, unsigned long long channel_size, unsigned int eletype, unsigned long long ele_size, char* data, unsigned long long width_step)
 {
-	bear::dynamic_image_ptr image(width, height, channel_size, bear::data_type(eletype), ele_size, data, width_step);
-	auto v = (std::vector<std::vector<bear::dynamic_image_ptr>>*)m;
+	
+	bear::dynamic_image_ptr image;
+	try {
+		image = bear::dynamic_image_ptr(width, height, channel_size, bear::data_type(eletype), ele_size, data, width_step);
+	}
+	catch (bear::bear_exception e) {
+		std::cout << e.what() << std::endl;
+		return 0;
+	}
+	std::vector<std::vector<bear::dynamic_image_ptr>>* v = (std::vector<std::vector<bear::dynamic_image_ptr>>*)m;
 	(*v)[y].push_back(image);
+	return 1;
 }
 
 void freeMat(matImagePtr m)
 {
-	auto mp = (std::vector<std::vector<bear::dynamic_image_ptr>>*)m;
+	std::vector<std::vector<bear::dynamic_image_ptr>>* mp = (std::vector<std::vector<bear::dynamic_image_ptr>>*)m;
 	delete mp;
 }
