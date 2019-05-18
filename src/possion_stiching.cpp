@@ -131,23 +131,16 @@ static void _poisson_stiching_inner(
 	Image dst,
 	Dx && get_dx,
 	Dy && get_dy,
-	unsigned int format,
 	PStichingParam param)
 {
 	image<Unit, 1> dx(width(dst), height(dst));
 	image<Unit, 1> dy(width(dst), height(dst));
 	image<Unit, 1> ds(width(dst), height(dst));
 
-	int chl[3];
-
-	chl[0] = FI_RED(format);
-	chl[1] = FI_GREEN(format);
-	chl[2] = FI_BLUE(format);
-
-	for (int i = 0; i < 3; ++i)
+	for (int i = 0; i < dst[0][0].size(); ++i)
 	{
-		std::forward<Dx>(get_dx)(dx, chl[i]);
-		std::forward<Dy>(get_dy)(dy, chl[i]);
+		std::forward<Dx>(get_dx)(dx, i);
+		std::forward<Dy>(get_dy)(dy, i);
 
 		if (param.constrain == PossionNoConstrain)
 		{
@@ -235,7 +228,7 @@ static void _poisson_stiching_inner(
 		}
 
 
-		stiching(dst, ds, chl[i]);
+		stiching(dst, ds, i);
 	}
 }
 
@@ -244,7 +237,6 @@ static void _poisson_stiching_merged(
 	Image dst,
 	ConstImage src,
 	const_image_ptr<unsigned char, 1> mask,
-	unsigned int format,
 	PStichingParam param)
 {
 	copy(dst, src);
@@ -260,7 +252,6 @@ static void _poisson_stiching_merged(
 	{
 			y_d(dy, src, ch, mask, _ZERO_PS<Unit>());
 	},
-		format,
 		param
 	);
 }
@@ -269,12 +260,9 @@ void poisson_stiching_merged(
 	dynamic_image_ptr dst,
 	const_dynamic_image_ptr src,
 	const_dynamic_image_ptr _mask,
-	unsigned int format,
 	PStichingParam param)
 {
 	assert(
-		dst.channel_size() == FI_BPP(format) &&
-		src.channel_size() == FI_BPP(format) &&
 		(1 == dst.elm_size() || 2 == dst.elm_size()) &&
 		(1 == src.elm_size() || 2 == src.elm_size()) &&
 		src.elm_size() == dst.elm_size() &&
@@ -300,14 +288,14 @@ void poisson_stiching_merged(
 			_poisson_stiching_merged<float>(
 				tensor_ptr<unsigned char, 3>(dst),
 				const_tensor_ptr<unsigned char, 3>(src),
-				mask, format, param);
+				mask, param);
 		}
 		else
 		{
 			_poisson_stiching_merged<float>(
 				tensor_ptr<unsigned short, 3>(dst),
 				const_tensor_ptr<unsigned short, 3>(src),
-				mask, format, param);
+				mask, param);
 
 		}
 	}
@@ -318,14 +306,14 @@ void poisson_stiching_merged(
 			_poisson_stiching_merged<unsigned short>(
 				tensor_ptr<unsigned char, 3>(dst),
 				const_tensor_ptr<unsigned char, 3>(src),
-				mask, format, param);
+				mask, param);
 		}
 		else
 		{
 			_poisson_stiching_merged<unsigned short>(
 				tensor_ptr<unsigned short, 3>(dst),
 				const_tensor_ptr<unsigned short, 3>(src),
-				mask, format, param);
+				mask,  param);
 
 		}
 	}
@@ -337,7 +325,6 @@ void poisson_stiching(
 	const_dynamic_image_ptr src1,
 	const_dynamic_image_ptr src2,
 	const_dynamic_image_ptr _mask,
-	unsigned int format,
 	PStichingParam param)
 {
 	auto maskbuf = mask_to_byte(_mask);
@@ -368,7 +355,7 @@ void poisson_stiching(
 			mask);
 	}
 
-	poisson_stiching_merged(dst, src1, mask, format, param);
+	poisson_stiching_merged(dst, src1, mask, param);
 }
 
 
@@ -428,7 +415,6 @@ static void _poisson_stiching_m(
 	Dst dst,
 	Src src,
 	size_t rd,
-	unsigned int format,
 	PStichingParam param)
 {
 	_poisson_stiching_inner<Unit>(
@@ -482,7 +468,6 @@ static void _poisson_stiching_m(
 			y_d_p(dst, img1, img2, ch, _ZERO_PS<Unit>());
 		});
 	},
-		format,
 		param);
 
 }
@@ -492,7 +477,6 @@ static void _poisson_stiching_a(
 	Dst dst,
 	Src src,
 	size_t rd,
-	unsigned int format,
 	PStichingParam param)
 {
 	for_each_img(src, rd, [&dst, &src](
@@ -512,16 +496,16 @@ static void _poisson_stiching_a(
 
 	if (param.float_precision)
 	{
-		_poisson_stiching_m<float>(dst, src, rd, format, param);
+		_poisson_stiching_m<float>(dst, src, rd, param);
 	}
 	else
 	{
-		_poisson_stiching_m<unsigned short>(dst, src, rd, format, param);
+		_poisson_stiching_m<unsigned short>(dst, src, rd, param);
 	}
 
 }
 
-static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, size_t redundance, unsigned int format)
+static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, size_t redundance)
 {
 	if (0 == to_ptr(src).total_size())
 	{
@@ -554,8 +538,7 @@ static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, si
 
 			if (ws[x] != img.width() ||
 				hs[y] != img.height() ||
-				es != img.elm_size() ||
-				FI_BPP(format) != img.channel_size())
+				es != img.elm_size())
 			{
 				throw bear_exception(exception_type::size_different, "src size inconsistence!");
 			}
@@ -589,10 +572,9 @@ void poisson_stiching(
 	dynamic_image_ptr dst,
 	const PStichingVectorSrc &src,
 	size_t rd,
-	unsigned int format,
 	PStichingParam param)
 {
-	if (dst.size() != check_src(src.src, rd, format) || dst.elm_size() != src.src[0][0].elm_size())
+	if (dst.size() != check_src(src.src, rd) || dst.elm_size() != src.src[0][0].elm_size())
 	{
 		throw bear_exception(exception_type::size_different, "src dst size different!");
 	}
@@ -606,7 +588,7 @@ void poisson_stiching(
 		{
 			return const_tensor_ptr<unsigned char, 3>(img);
 		}, src.src)),
-			rd,format,param);
+			rd,param);
 	}
 	else
 	{
@@ -617,7 +599,7 @@ void poisson_stiching(
 		{
 			return const_tensor_ptr<unsigned short, 3>(img);
 		}, src.src)),
-			rd, format, param);
+			rd, param);
 	}
 }
 
@@ -627,17 +609,9 @@ static void covariance(
 	float &max_cv,
 	float &mse,
 	Image img1,
-	Image img2,
-	unsigned int format)
+	Image img2)
 {
 	using Unit = typename Image::elm_type;
-
-	unsigned int chl[] =
-	{
-		FI_RED(format),
-		FI_GREEN(format),
-		FI_BLUE(format),
-	};
 
 	unsigned long long eab = 0;
 	unsigned long long eaa = 0;
@@ -646,22 +620,19 @@ static void covariance(
 	unsigned long long eb = 0;
 	unsigned long long eapb = 0;
 
-	zip_to<2>([&](array_ptr<Unit> r1, array_ptr<Unit> r2 )
+	zip_to<3>([&](Unit r1, Unit r2 )
 	{
-		for (int i = 0; i < 3; ++i)
-		{
-			unsigned int a = r1[chl[i]];
-			unsigned int b = r2[chl[i]];
-			eab += a * b;
-			eaa += a * a;
-			ebb += b * b;
-			ea += a;
-			eb += b;
+		unsigned int a = r1;
+		unsigned int b = r2;
+		eab += a * b;
+		eaa += a * a;
+		ebb += b * b;
+		ea += a;
+		eb += b;
 
-			int apb = a - b;
+		int apb = a - b;
 
-			eapb += apb * apb;
-		}
+		eapb += apb * apb;
 	}, img1, img2);
 
 	long long cab = eab - ea * eb;
@@ -681,13 +652,12 @@ template<typename Image>
 inline float error_tt(
 	Image img1,
 	Image img2,
-	unsigned int format,
 	float th_cv,
 	float th_mse)
 {
 	float cv, max_cv, mse;
 
-	covariance(cv, max_cv, mse, img1, img2, format);
+	covariance(cv, max_cv, mse, img1, img2);
 
 	float fcv = atan((max_cv - cv) / th_cv) * (2.0f / 3.141593653f);
 
@@ -702,7 +672,6 @@ void _poisson_stiching_check(
 	const_array_ptr<image_point> eliminate,
 	Src src,
 	size_t rd,
-	unsigned int format,
 	float th_cv,
 	float th_mse)
 {
@@ -730,7 +699,7 @@ void _poisson_stiching_check(
 			img1 = clip_image(img1, image_rectangle(width(img1) - rd * 2, p.y, rd * 2, bs.height));
 			img2 = clip_image(img2, image_rectangle(0, p.y, rd * 2, bs.height));
 
-			dx[y][x] = error_tt(img1, img2, format, th_cv, th_mse);
+			dx[y][x] = error_tt(img1, img2, th_cv, th_mse);
 		}
 
 		if (bh - 1 != y)
@@ -741,7 +710,7 @@ void _poisson_stiching_check(
 			img1 = clip_image(img1, image_rectangle(p.x, height(img1) - rd * 2, bs.width, rd * 2));
 			img2 = clip_image(img2, image_rectangle(p.x, 0, bs.width, rd * 2));
 
-			dy[y][x] = error_tt(img1, img2, format, th_cv, th_mse);
+			dy[y][x] = error_tt(img1, img2, th_cv, th_mse);
 		}
 	});
 
@@ -822,11 +791,10 @@ void poisson_stiching_check(
 	const_array_ptr<image_point> eliminate,
 	const PStichingVectorSrc &src,
 	size_t rd,
-	unsigned int format,
 	float th_cv,
 	float th_mse)
 {
-	check_src(src.src, rd, format);
+	check_src(src.src, rd);
 
 	if (1 == src.src[0][0].elm_size())
 	{
@@ -838,7 +806,7 @@ void poisson_stiching_check(
 		{
 			return const_tensor_ptr<unsigned char, 3>(img);
 		}, src.src)),
-			rd, format, th_cv, th_mse);
+			rd, th_cv, th_mse);
 	}
 	else
 	{
@@ -850,6 +818,6 @@ void poisson_stiching_check(
 		{
 			return const_tensor_ptr<unsigned short, 3>(img);
 		}, src.src)),
-			rd, format, th_cv, th_mse);
+			rd, th_cv, th_mse);
 	}
 }

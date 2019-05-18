@@ -60,7 +60,7 @@ int main(){
 
 	try
 	{
-		poisson_stiching(dst, src, rd, F_BGR, param);
+		poisson_stiching(dst, src, rd, param);
 	}
 	catch (const bear_exception & e)
 	{

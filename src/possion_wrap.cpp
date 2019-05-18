@@ -23,7 +23,7 @@ void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, u
 			param.constrain = PossionNoConstrain;
 		}
 
-		poisson_stiching(*dst, *src, rd, F_RGBA, param);
+		poisson_stiching(*dst, *src, rd, param);
 	}
 	catch (bear::bear_exception e) {
 		std::cout<<e.what()<<std::endl;

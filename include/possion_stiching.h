@@ -31,7 +31,6 @@ void poisson_stiching_merged(
 	bear::dynamic_image_ptr dst,
 	bear::const_dynamic_image_ptr src,
 	bear::const_dynamic_image_ptr mask,
-	unsigned int format,
 	PStichingParam param);
 
 
@@ -40,7 +39,6 @@ void poisson_stiching(
 	bear::const_dynamic_image_ptr src1,
 	bear::const_dynamic_image_ptr src2,
 	bear::const_dynamic_image_ptr mask,
-	unsigned int format,
 	PStichingParam param);
 
 
@@ -79,7 +77,6 @@ void poisson_stiching(
 	bear::dynamic_image_ptr dst,
 	const PStichingVectorSrc &src,
 	size_t redundance,
-	unsigned int format,
 	PStichingParam param = PStichingParam());
 
 
@@ -88,7 +85,6 @@ void poisson_stiching_check(
 	bear::const_array_ptr<bear::image_point> eliminate,
 	const PStichingVectorSrc &src,
 	size_t rd,
-	unsigned int format,
 	float th_cv,
 	float th_mse);
 
