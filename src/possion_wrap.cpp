@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, unsigned int format)
+void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, unsigned int format, unsigned int mode)
 {
 	try {
 		std::vector<std::vector<bear::dynamic_image_ptr>>* src = (std::vector<std::vector<bear::dynamic_image_ptr>>*) srcPtr;
@@ -14,7 +14,7 @@ void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, u
 		PStichingParam param;
 
 		param.iteration_time = 100;
-		if (src->front().size() == 1)
+		if (mode)
 		{
 			param.constrain = PossionPanoramaConstrain;
 		}
