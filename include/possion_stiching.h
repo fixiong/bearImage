@@ -12,6 +12,7 @@ enum PossionConstrain
 	PossionNoConstrain,
 	PossionEstimateConstrain,
 	PossionPanoramaConstrain,
+	PossionPanoramaBorderConstrain,
 };
 
 struct PStichingParam
@@ -23,6 +24,8 @@ struct PStichingParam
 
 	bool edge_restriction = false;
 	float edge_smooth = 1.0f;
+
+	bear::const_dynamic_image_ptr panorama_border;
 
 	PossionConstrain constrain = PossionNoConstrain;
 };

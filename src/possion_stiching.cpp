@@ -126,6 +126,93 @@ static void estimate_border(Array &db, bool ring)
 }
 
 
+template<typename Unit>
+static void _get_border(
+	image_ptr<Unit, 1> bx,
+	image_ptr<Unit, 1> by,
+	image_ptr<Unit, 1> dx,
+	image_ptr<Unit, 1> dy,
+	PStichingParam param)
+{
+	int w = (int)width(dx);
+	int h = (int)height(dx);
+
+	if (param.constrain == PossionPanoramaConstrain)
+	{
+		vector<Unit> bd1(h);
+		vector<Unit> bd2(h);
+
+		for (int y = 0; y < h; ++y)
+		{
+			bd1[y] = dy[y][0];
+			bd2[y] = dy[y][w - 1];
+		}
+
+		map_function([](Unit &v1, Unit v2) {
+			v1 = (v1 + v2) / 2;
+		}, bd1, bd2);
+
+		estimate_border<Unit>(bd1, false);
+
+		for (int y = 0; y < h; ++y)
+		{
+			bx[y][0] = bx[y][1] = bd1[y];
+		}
+
+		by[0].fill(bd1[0]);
+		by[1].fill(bd1.back());
+	}
+	else
+	{
+		vector<Unit> bd(w * 2 + h * 2 - 4);
+
+		copy(to_ptr(bd).clip(0, w), dx[0]);
+
+		for (int y = 1; y < h; ++y)
+		{
+			bd[w - 1 + y] = dy[y][w - 1];
+		}
+
+		for (int x = 1; x < w; ++x)
+		{
+			bd[w + h - 2 + x] = _ZERO_PS<Unit>::minus(dx[h - 1][w - x]);
+		}
+
+		for (int y = 1; y < h - 1; ++y)
+		{
+			bd[w * 2 + h - 3 + y] = _ZERO_PS<Unit>::minus(dx[h - y][0]);
+		}
+
+		bd[0] = _ZERO_PS<Unit>::minus(dx[1][0]);
+
+		estimate_border<Unit>(bd, true);
+
+		copy(by[0], to_ptr(bd).clip(0, w));
+
+		for (int y = 0; y < h; ++y)
+		{
+			bx[y][1] = bd[w - 1 + y];
+		}
+
+		for (int x = 0; x < w; ++x)
+		{
+			by[1][w - 1 - x] = bd[w + h - 2 + x];
+		}
+
+		for (int y = 0; y < h - 1; ++y)
+		{
+			bx[h - 1 - y][0] = bd[w * 2 + h - 3 + y];
+		}
+
+		bx[0][0] = bd[0];
+
+		if (param.constrain == PossionPanoramaBorderConstrain)
+		{
+		}
+	}
+}
+
+
 template<typename Unit, typename Image, typename Dx, typename Dy>
 static void _poisson_stiching_inner(
 	Image dst,
@@ -153,77 +240,7 @@ static void _poisson_stiching_inner(
 			int h = (int)height(dst);
 			image<Unit, 1> bx(2, h);
 			image<Unit, 1> by(w, 2);
-
-
-			if (param.constrain == PossionPanoramaConstrain)
-			{
-				vector<Unit> bd1(h);
-				vector<Unit> bd2(h);
-
-				for (int y = 0; y < h; ++y)
-				{
-					bd1[y] = dy[y][0];
-					bd2[y] = dy[y][w - 1];
-				}
-
-				map_function([](Unit &v1, Unit v2) {
-					v1 = (v1 + v2) / 2;
-				}, bd1, bd2);
-
-				estimate_border<Unit>(bd1, false);
-
-				for (int y = 0; y < h; ++y)
-				{
-					bx[y][0] = bx[y][1] = bd1[y];
-				}
-
-				by[0].fill(bd1[0]);
-				by[1].fill(bd1.back());
-			}
-			else
-			{
-				vector<Unit> bd(w * 2 + h * 2 - 4);
-
-				copy(to_ptr(bd).clip(0, w), dx[0]);
-
-				for (int y = 1; y < h; ++y)
-				{
-					bd[w - 1 + y] = dy[y][w - 1];
-				}
-
-				for (int x = 1; x < w; ++x)
-				{
-					bd[w + h - 2 + x] = _ZERO_PS<Unit>::minus(dx[h - 1][w - x]);
-				}
-
-				for (int y = 1; y < h - 1; ++y)
-				{
-					bd[w * 2 + h - 3 + y] = _ZERO_PS<Unit>::minus(dx[h - y][0]);
-				}
-
-				bd[0] = _ZERO_PS<Unit>::minus(dx[1][0]);
-
-				estimate_border<Unit>(bd, true);
-
-				copy(by[0], to_ptr(bd).clip(0, w));
-
-				for (int y = 0; y < h; ++y)
-				{
-					bx[y][1] = bd[w - 1 + y];
-				}
-
-				for (int x = 0; x < w; ++x)
-				{
-					by[1][w - 1 - x] = bd[w + h - 2 + x];
-				}
-
-				for (int y = 0; y < h - 1; ++y)
-				{
-					bx[h - 1 - y][0] = bd[w * 2 + h - 3 + y];
-				}
-
-				bx[0][0] = bd[0];
-			}
+			_get_border<Unit>(bx, by, dx, dy, param);
 			dxy_poisson_solver(ds, dx, dy, bx, by, param.iteration_time, param.base_level);
 		}
 
