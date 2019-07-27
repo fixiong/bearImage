@@ -125,130 +125,6 @@ static void estimate_border(Array &db, bool ring)
 	}, db, acc);
 }
 
-
-template<typename Unit>
-static void _get_border(
-	image_ptr<Unit, 1> bx,
-	image_ptr<Unit, 1> by,
-	image_ptr<Unit, 1> dx,
-	image_ptr<Unit, 1> dy,
-	PStichingParam param)
-{
-	int w = (int)width(dx);
-	int h = (int)height(dx);
-
-	if (param.constrain == PossionPanoramaConstrain)
-	{
-		vector<Unit> bd1(h);
-		vector<Unit> bd2(h);
-
-		for (int y = 0; y < h; ++y)
-		{
-			bd1[y] = dy[y][0];
-			bd2[y] = dy[y][w - 1];
-		}
-
-		map_function([](Unit &v1, Unit v2) {
-			v1 = (v1 + v2) / 2;
-		}, bd1, bd2);
-
-		estimate_border<Unit>(bd1, false);
-
-		for (int y = 0; y < h; ++y)
-		{
-			bx[y][0] = bx[y][1] = bd1[y];
-		}
-
-		by[0].fill(bd1[0]);
-		by[1].fill(bd1.back());
-	}
-	else
-	{
-		vector<Unit> bd(w * 2 + h * 2 - 4);
-
-		copy(to_ptr(bd).clip(0, w), dx[0]);
-
-		for (int y = 1; y < h; ++y)
-		{
-			bd[w - 1 + y] = dy[y][w - 1];
-		}
-
-		for (int x = 1; x < w; ++x)
-		{
-			bd[w + h - 2 + x] = _ZERO_PS<Unit>::minus(dx[h - 1][w - x]);
-		}
-
-		for (int y = 1; y < h - 1; ++y)
-		{
-			bd[w * 2 + h - 3 + y] = _ZERO_PS<Unit>::minus(dx[h - y][0]);
-		}
-
-		bd[0] = _ZERO_PS<Unit>::minus(dx[1][0]);
-
-		estimate_border<Unit>(bd, true);
-
-		copy(by[0], to_ptr(bd).clip(0, w));
-
-		for (int y = 0; y < h; ++y)
-		{
-			bx[y][1] = bd[w - 1 + y];
-		}
-
-		for (int x = 0; x < w; ++x)
-		{
-			by[1][w - 1 - x] = bd[w + h - 2 + x];
-		}
-
-		for (int y = 0; y < h - 1; ++y)
-		{
-			bx[h - 1 - y][0] = bd[w * 2 + h - 3 + y];
-		}
-
-		bx[0][0] = bd[0];
-
-		if (param.constrain == PossionPanoramaBorderConstrain)
-		{
-		}
-	}
-}
-
-
-template<typename Unit, typename Image, typename Dx, typename Dy>
-static void _poisson_stiching_inner(
-	Image dst,
-	Dx && get_dx,
-	Dy && get_dy,
-	PStichingParam param)
-{
-	image<Unit, 1> dx(width(dst), height(dst));
-	image<Unit, 1> dy(width(dst), height(dst));
-	image<Unit, 1> ds(width(dst), height(dst));
-
-	for (int i = 0; i < dst[0][0].size(); ++i)
-	{
-		std::forward<Dx>(get_dx)(dx, i);
-		std::forward<Dy>(get_dy)(dy, i);
-
-		if (param.constrain == PossionNoConstrain)
-		{
-			dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
-
-		}
-		else
-		{
-			int w = (int)width(dst);
-			int h = (int)height(dst);
-			image<Unit, 1> bx(2, h);
-			image<Unit, 1> by(w, 2);
-			_get_border<Unit>(bx, by, dx, dy, param);
-			dxy_poisson_solver(ds, dx, dy, bx, by, param.iteration_time, param.base_level);
-		}
-
-
-		stiching(dst, ds, i);
-	}
-}
-
 template<typename Unit, typename Image, typename ConstImage>
 static void _poisson_stiching_merged(
 	Image dst,
@@ -260,17 +136,20 @@ static void _poisson_stiching_merged(
 
 	assert(width(src) == mask.width() && height(src) == mask.height());
 
-	_poisson_stiching_inner<Unit>(dst,
-		[&](image_ptr<Unit, 1> dx, int ch)
+
+	image<Unit, 1> dx(width(dst), height(dst));
+	image<Unit, 1> dy(width(dst), height(dst));
+	image<Unit, 1> ds(width(dst), height(dst));
+
+	for (int i = 0; i < dst[0][0].size(); ++i)
 	{
-			x_d(dx, src, ch, mask, _ZERO_PS<Unit>());
-	},
-		[&](image_ptr<Unit, 1> dy, int ch)
-	{
-			y_d(dy, src, ch, mask, _ZERO_PS<Unit>());
-	},
-		param
-	);
+		x_d(to_ptr(dx), src, i, mask, _ZERO_PS<Unit>());
+		y_d(to_ptr(dy), src, i, mask, _ZERO_PS<Unit>());
+
+		dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+
+		stiching(dst, ds, i);
+	}
 }
 
 void poisson_stiching_merged(
@@ -427,19 +306,22 @@ static void for_each_img(Src src,size_t rd, C && c)
 	}
 }
 
-template<typename Unit, typename Dst, typename Src>
+template<typename Unit, typename Dst, typename Src, typename Border>
 static void _poisson_stiching_m(
 	Dst dst,
 	Src src,
+	Border border,
 	size_t rd,
 	PStichingParam param)
 {
-	_poisson_stiching_inner<Unit>(
-		dst,
-		[&src, &param, rd](image_ptr<Unit,1> dx, int ch)
+	image<Unit, 1> dx(width(dst), height(dst));
+	image<Unit, 1> dy(width(dst), height(dst));
+	image<Unit, 1> ds(width(dst), height(dst));
+
+	for (int i = 0; i < size_at<2>(dst); ++i)
 	{
-		dx.fill(_ZERO_PS<Unit>::run());
-		for_each_img(src, rd, [&src, &dx, ch, &param, rd](
+		to_ptr(dx).fill(_ZERO_PS<Unit>::run());
+		for_each_img(src, rd, [&src, &dx, i, &param, rd](
 			size_t x, size_t y,
 			image_size bs,
 			image_point p,
@@ -455,16 +337,14 @@ static void _poisson_stiching_m(
 			img1 = clip_image(img1, image_rectangle(width(img1) - rd * 2, p.y, sz.width, sz.height));
 			img2 = clip_image(img2, image_rectangle(0, p.y, sz.width, sz.height));
 
-			auto dst = dx.clip(image_rectangle(cp.x + bs.width - rd, cp.y, sz.width, sz.height));
+			auto dst = to_ptr(dx).clip(image_rectangle(cp.x + bs.width - rd, cp.y, sz.width, sz.height));
 
-			x_d_p(dst, img1, img2, ch, _ZERO_PS<Unit>());
+			x_d_p(dst, img1, img2, i, _ZERO_PS<Unit>());
 
 		});
-	},
-		[&src, &param, rd](image_ptr<Unit, 1> dy, int ch)
-	{
-		dy.fill(_ZERO_PS<Unit>::run());;
-		for_each_img(src, rd, [&src, &dy, ch, &param, rd](
+
+		to_ptr(dy).fill(_ZERO_PS<Unit>::run());;
+		for_each_img(src, rd, [&src, &dy, i, &param, rd](
 			size_t x, size_t y,
 			image_size bs,
 			image_point p,
@@ -480,19 +360,169 @@ static void _poisson_stiching_m(
 			img1 = clip_image(img1, image_rectangle(p.x, height(img1) - rd * 2, sz.width, sz.height));
 			img2 = clip_image(img2, image_rectangle(p.x, 0, sz.width, sz.height));
 
-			auto dst = dy.clip(image_rectangle(cp.x, cp.y + bs.height - rd, sz.width, sz.height));
+			auto dst = to_ptr(dy).clip(image_rectangle(cp.x, cp.y + bs.height - rd, sz.width, sz.height));
 
-			y_d_p(dst, img1, img2, ch, _ZERO_PS<Unit>());
+			y_d_p(dst, img1, img2, i, _ZERO_PS<Unit>());
 		});
-	},
-		param);
 
+		if (param.constrain == PossionNoConstrain)
+		{
+			dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+		}
+		else
+		{
+			int w = (int)width(dst);
+			int h = (int)height(dst);
+			image<Unit, 1> bx(2, h);
+			image<Unit, 1> by(w, 2);
+
+			if (param.constrain == PossionPanoramaConstrain)
+			{
+				vector<Unit> bd1(h);
+				vector<Unit> bd2(h);
+
+				for (int y = 0; y < h; ++y)
+				{
+					bd1[y] = dy[y][0];
+					bd2[y] = dy[y][w - 1];
+				}
+
+				map_function([](Unit &v1, Unit v2) {
+					v1 = (v1 + v2) / 2;
+				}, bd1, bd2);
+
+				estimate_border<Unit>(bd1, false);
+
+				for (int y = 0; y < h; ++y)
+				{
+					bx[y][0] = bx[y][1] = bd1[y];
+				}
+
+				by[0].fill(bd1[0]);
+				by[1].fill(bd1.back());
+			}
+			else
+			{
+				vector<Unit> bd(w * 2 + h * 2 - 4);
+
+				copy(to_ptr(bd).clip(0, w), dx[0]);
+
+				for (int y = 1; y < h; ++y)
+				{
+					bd[w - 1 + y] = dy[y][w - 1];
+				}
+
+				for (int x = 1; x < w; ++x)
+				{
+					bd[w + h - 2 + x] = _ZERO_PS<Unit>::minus(dx[h - 1][w - x]);
+				}
+
+				for (int y = 1; y < h - 1; ++y)
+				{
+					bd[w * 2 + h - 3 + y] = _ZERO_PS<Unit>::minus(dx[h - y][0]);
+				}
+
+				bd[0] = _ZERO_PS<Unit>::minus(dx[1][0]);
+
+				estimate_border<Unit>(bd, true);
+
+				copy(by[0], to_ptr(bd).clip(0, w));
+
+				for (int y = 0; y < h; ++y)
+				{
+					bx[y][1] = bd[w - 1 + y];
+				}
+
+				for (int x = 0; x < w; ++x)
+				{
+					by[1][w - 1 - x] = bd[w + h - 2 + x];
+				}
+
+				for (int y = 0; y < h - 1; ++y)
+				{
+					bx[h - 1 - y][0] = bd[w * 2 + h - 3 + y];
+				}
+
+				bx[0][0] = bd[0];
+
+				if (param.constrain == PossionPanoramaBorderConstrain)
+				{
+					if (size_at<2>(border) != size_at<2>(dst) || height(border) != h || width(border) != 2) {
+						throw bear_exception(exception_type::size_different, "wrong border size!");
+					}
+
+					vector<Unit> df(h);
+
+					for (size_t y = 0; y < h; ++y)
+					{
+						auto d1 = _ZERO_PS<Unit>::from_unit(border[y][0][i], border[y][1][i]);
+						auto d2 = _ZERO_PS<Unit>::acc(bx[y][0], d1);
+					}
+
+					/*
+
+					using CT = decltype(bx[0] + bx[0]);
+					vector<CT> acc(db.size());
+
+					acc[0] = db[0];
+
+					for (int i = 1; i < (int)db.size(); ++i)
+					{
+						acc[i] = _ZERO_PS<Unit>::acc(acc[i - 1], db[i]);
+					}
+
+					if (ring)
+					{
+						auto er = _ZERO_PS<Unit>::run() - acc.back();
+
+						for (int i = 0; i < (int)db.size(); ++i)
+						{
+							acc[i] += er * (i + 1) / (int)db.size();
+						}
+					}
+
+					auto avg = accumulate(acc.begin(), acc.end(), (CT)0) / (int)db.size();
+
+					map_function([avg](Unit &d, CT s)
+					{
+						d = _ZERO_PS<Unit>::limite(s - avg);
+					}, db, acc);
+
+					Dst dx;
+					Src src1;
+					Src src2;
+					size_t ch;
+					ZP && zp;
+					{
+						auto rd = dx.width() / 2;
+						double bs = 1.0 / dx.width();
+
+						for (size_t y = 0; y < dx.height(); ++y)
+						{
+							double t = 0.0;
+							for (size_t x = 0; x < dx.width(); ++x)
+							{
+								t += std::forward<ZP>(zp).from_unit(src1[y][x][ch], src2[y][x][ch]);
+							}
+
+							dx[y][rd] = (typename Dst::elm_type)floor(t * bs + 0.5);
+						}
+					}
+					*/
+				}
+			}
+			dxy_poisson_solver(ds, dx, dy, bx, by, param.iteration_time, param.base_level);
+		}
+
+		stiching(dst, ds, i);
+	}
 }
 
-template<typename Dst, typename Src>
+template<typename Dst, typename Src, typename Border>
 static void _poisson_stiching_a(
 	Dst dst,
 	Src src,
+	Border bd,
 	size_t rd,
 	PStichingParam param)
 {
@@ -513,11 +543,11 @@ static void _poisson_stiching_a(
 
 	if (param.float_precision)
 	{
-		_poisson_stiching_m<float>(dst, src, rd, param);
+		_poisson_stiching_m<float>(dst, src, bd, rd, param);
 	}
 	else
 	{
-		_poisson_stiching_m<unsigned short>(dst, src, rd, param);
+		_poisson_stiching_m<unsigned short>(dst, src, bd, rd, param);
 	}
 
 }
@@ -598,6 +628,11 @@ void poisson_stiching(
 
 	if (1 == dst.elm_size())
 	{
+		const_tensor_ptr<unsigned char, 3> bd;
+		if (param.constrain == PossionPanoramaBorderConstrain)
+		{
+			bd = const_tensor_ptr<unsigned char, 3>(param.panorama_border);
+		}
 		_poisson_stiching_a(
 			tensor_ptr<unsigned char, 3>(dst),
 			to_ptr(map_function([] (const const_dynamic_image_ptr & img) 
@@ -605,10 +640,16 @@ void poisson_stiching(
 		{
 			return const_tensor_ptr<unsigned char, 3>(img);
 		}, src.src)),
+			bd,
 			rd,param);
 	}
 	else
 	{
+		const_tensor_ptr<unsigned short, 3> bd;
+		if (param.constrain == PossionPanoramaBorderConstrain)
+		{
+			bd = const_tensor_ptr<unsigned short, 3>(param.panorama_border);
+		}
 		_poisson_stiching_a(
 			tensor_ptr<unsigned short, 3>(dst),
 			to_ptr(map_function([](const const_dynamic_image_ptr & img)
@@ -616,6 +657,7 @@ void poisson_stiching(
 		{
 			return const_tensor_ptr<unsigned short, 3>(img);
 		}, src.src)),
+			bd,
 			rd, param);
 	}
 }
