@@ -50,6 +50,11 @@ struct _ZERO_PS<float>
 		return 0.0f;
 	}
 
+	static float limite_zero(float v)
+	{
+		return v;
+	}
+
 	static float limite(float v)
 	{
 		return v;
@@ -94,9 +99,14 @@ struct _ZERO_PS<unsigned short>
 		return 32768;
 	}
 
-	static unsigned short limite(int v)
+	static unsigned short limite_zero(int v)
 	{
 		return limiteU16(v + 32768);
+	}
+
+	static unsigned short limite(int v)
+	{
+		return limiteU16(v);
 	}
 
 	static unsigned short minus(unsigned short v)

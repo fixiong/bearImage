@@ -91,4 +91,8 @@ void poisson_stiching_check(
 	float th_cv,
 	float th_mse);
 
+void make_panorama_border(
+	bear::dynamic_image_ptr border,
+	bear::array_ptr<bear::const_dynamic_image_ptr> src);
+
 #endif

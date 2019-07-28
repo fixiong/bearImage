@@ -121,7 +121,7 @@ static void estimate_border(Array &db, bool ring)
 
 	map_function([avg](Unit &d, CT s)
 	{
-		d = _ZERO_PS<Unit>::limite(s - avg);
+		d = _ZERO_PS<Unit>::limite_zero(s - avg);
 	}, db, acc);
 }
 
@@ -451,64 +451,34 @@ static void _poisson_stiching_m(
 						throw bear_exception(exception_type::size_different, "wrong border size!");
 					}
 
-					vector<Unit> df(h);
+					using CT = decltype(_ZERO_PS<Unit>::acc(bx[0][0], Unit(0)));
+					CT hd, ld;
+					CT bs = CT(w - 1);
+					CT tp = bs / 2;
 
-					for (size_t y = 0; y < h; ++y)
+					for (int y = 0; y < h; ++y)
 					{
-						auto d1 = _ZERO_PS<Unit>::from_unit(border[y][0][i], border[y][1][i]);
-						auto d2 = _ZERO_PS<Unit>::acc(bx[y][0], d1);
-					}
-
-					/*
-
-					using CT = decltype(bx[0] + bx[0]);
-					vector<CT> acc(db.size());
-
-					acc[0] = db[0];
-
-					for (int i = 1; i < (int)db.size(); ++i)
-					{
-						acc[i] = _ZERO_PS<Unit>::acc(acc[i - 1], db[i]);
-					}
-
-					if (ring)
-					{
-						auto er = _ZERO_PS<Unit>::run() - acc.back();
-
-						for (int i = 0; i < (int)db.size(); ++i)
+						CT d1 = _ZERO_PS<Unit>::from_unit(border[y][0][i], border[y][1][i]);
+						CT d2 = _ZERO_PS<Unit>::acc(bx[y][0], d1);
+						CT d3 = d2 - CT(bx[y][1]);
+						if (y == 0)
 						{
-							acc[i] += er * (i + 1) / (int)db.size();
+							hd = d3;
 						}
-					}
-
-					auto avg = accumulate(acc.begin(), acc.end(), (CT)0) / (int)db.size();
-
-					map_function([avg](Unit &d, CT s)
-					{
-						d = _ZERO_PS<Unit>::limite(s - avg);
-					}, db, acc);
-
-					Dst dx;
-					Src src1;
-					Src src2;
-					size_t ch;
-					ZP && zp;
-					{
-						auto rd = dx.width() / 2;
-						double bs = 1.0 / dx.width();
-
-						for (size_t y = 0; y < dx.height(); ++y)
+						else if (y == h-1)
 						{
-							double t = 0.0;
-							for (size_t x = 0; x < dx.width(); ++x)
-							{
-								t += std::forward<ZP>(zp).from_unit(src1[y][x][ch], src2[y][x][ch]);
-							}
-
-							dx[y][rd] = (typename Dst::elm_type)floor(t * bs + 0.5);
+							ld = d3;
 						}
+						bx[y][0] = _ZERO_PS<Unit>::limite(bx[y][0] + d3 * -tp / bs);
+						bx[y][1] = _ZERO_PS<Unit>::limite(bx[y][1] + d3 * (bs - tp) / bs);
 					}
-					*/
+
+
+					for (int x = 0; x < w; ++x)
+					{
+						by[0][x] = _ZERO_PS<Unit>::limite(by[0][x] + hd * (x - tp) / bs);
+						by[1][x] = _ZERO_PS<Unit>::limite(by[1][x] + ld * (x - tp) / bs);
+					}
 				}
 			}
 			dxy_poisson_solver(ds, dx, dy, bx, by, param.iteration_time, param.base_level);
@@ -878,5 +848,78 @@ void poisson_stiching_check(
 			return const_tensor_ptr<unsigned short, 3>(img);
 		}, src.src)),
 			rd, th_cv, th_mse);
+	}
+}
+
+template<typename Image, typename Ary>
+void _make_panorama_border(
+	Image border,
+	Ary src)
+{
+	size_t h = 0;
+	size_t w = 0;
+
+	to_ptr(src).for_each([&h,&w](Image img)
+	{
+		h += height(img);
+		if (w == 0)
+		{
+			w = width(img);
+		}
+		else if (w != width(img))
+		{
+			throw bear_exception(exception_type::size_different, "border width inconsistence!");
+		}
+	});
+
+	if (w == 0 || w & 1 || h == 0 || h != height(border) || width(border) != 2)
+	{
+		throw bear_exception(exception_type::size_different, "wrong border size!");
+	}
+
+	size_t y = 0;
+	size_t xl = w / 2;
+	size_t xr = w / 2 - 1;
+
+	to_ptr(src).for_each([&y,&border,xl,xr](Image img)
+	{
+		for (size_t sy = 0; sy < height(img); ++sy,++y)
+		{
+			border[y][0] = img[sy][xl];
+			border[y][1] = img[sy][xr];
+		}
+	});
+}
+	
+
+
+void make_panorama_border(
+	bear::dynamic_image_ptr _border,
+	bear::array_ptr<bear::const_dynamic_image_ptr> _src)
+{
+
+	if (1 == _border.elm_size())
+	{
+		 auto border = const_tensor_ptr<unsigned char, 3>(_border);
+
+		 auto src = map_function([](const const_dynamic_image_ptr & img)
+			 -> const_tensor_ptr<unsigned char, 3>
+		 {
+			 return const_tensor_ptr<unsigned char, 3>(img);
+		 }, _src);
+
+		 _make_panorama_border(border, src);
+	}
+	else
+	{
+		auto border = const_tensor_ptr<unsigned short, 3>(_border);
+
+		auto src = map_function([](const const_dynamic_image_ptr & img)
+			-> const_tensor_ptr<unsigned short, 3>
+		{
+			return const_tensor_ptr<unsigned short, 3>(img);
+		}, _src);
+
+		_make_panorama_border(border, src);
 	}
 }
