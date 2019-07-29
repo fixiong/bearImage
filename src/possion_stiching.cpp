@@ -318,6 +318,24 @@ static void _poisson_stiching_m(
 	image<Unit, 1> dy(width(dst), height(dst));
 	image<Unit, 1> ds(width(dst), height(dst));
 
+
+	tensor<typename Dst::elm_type, 3> srcXBorder(height(dst), 2, channel_size(dst));
+	{
+		int ky = 0;
+
+		for (int by = 0; by < height(src); ++by)
+		{
+			auto xf = src[by][0];
+			auto xl = src[by][width(src) - 1];
+
+			for (int y = int(rd); y < height(xf) - rd; ++y, ++ky)
+			{
+				copy(srcXBorder[ky][0], xf[y][0]);
+				copy(srcXBorder[ky][1], xl[y][width(xl) - 1]);
+			}
+		}
+	}
+
 	for (int i = 0; i < size_at<2>(dst); ++i)
 	{
 		to_ptr(dx).fill(_ZERO_PS<Unit>::run());
@@ -447,6 +465,8 @@ static void _poisson_stiching_m(
 
 				if (param.constrain == PossionPanoramaBorderConstrain)
 				{
+
+
 					if (size_at<2>(border) != size_at<2>(dst) || height(border) != h || width(border) != 2) {
 						throw bear_exception(exception_type::size_different, "wrong border size!");
 					}
@@ -458,8 +478,10 @@ static void _poisson_stiching_m(
 
 					for (int y = 0; y < h; ++y)
 					{
-						CT d1 = _ZERO_PS<Unit>::from_unit(border[y][0][i], border[y][1][i]);
+						CT d1 = _ZERO_PS<Unit>::from_unit(srcXBorder[y][0][i], srcXBorder[y][1][i]);
+						CT d1x = _ZERO_PS<Unit>::from_unit(border[y][0][i], border[y][1][i]);
 						CT d2 = _ZERO_PS<Unit>::acc(bx[y][0], d1);
+						d2 = _ZERO_PS<Unit>::acc(d2, _ZERO_PS<Unit>::minus(d1x));
 						CT d3 = d2 - CT(bx[y][1]);
 						if (y == 0)
 						{
