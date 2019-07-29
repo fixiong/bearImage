@@ -4,10 +4,11 @@
 #include <iostream>
 #include <string>
 
-void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, unsigned int format, unsigned int mode)
+void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, matImagePtr borderPtr, unsigned int rd, unsigned int format, unsigned int mode)
 {
 	try {
 		std::vector<std::vector<bear::dynamic_image_ptr>>* src = (std::vector<std::vector<bear::dynamic_image_ptr>>*) srcPtr;
+		std::vector<std::vector<bear::dynamic_image_ptr>>* border = (std::vector<std::vector<bear::dynamic_image_ptr>>*) borderPtr;
 		bear::dynamic_image_ptr* dst = (bear::dynamic_image_ptr*) dstPtr;
 
 
@@ -16,14 +17,37 @@ void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, unsigned int rd, u
 		param.iteration_time = 100;
 		if (mode)
 		{
-			param.constrain = PossionPanoramaConstrain;
+			param.constrain = PossionPanoramaBorderConstrain;
+
+			if (!border || border->size() != 1 || border->at(0).empty()) {
+				throw bear::bear_exception(bear::exception_type::other_error, "wrong panorama border!");
+			}
+
+			if (border->at(0)[0].elm_size() == 1)
+			{
+				bear::tensor<unsigned char, 3> bd(dst->height(), dst->width(), dst->channel_size());
+				param.panorama_border = bd;
+
+				PStichingVectorSrc bs(*border);
+				make_panorama_border(bd, bs.src[0]);
+				poisson_stiching(*dst, *src, rd, param);
+			}
+			else
+			{
+				bear::tensor<unsigned short, 3> bd(dst->height(), dst->width(), dst->channel_size());
+				param.panorama_border = bd;
+
+				PStichingVectorSrc bs(*border);
+				make_panorama_border(bd, bs.src[0]);
+				poisson_stiching(*dst, *src, rd, param);
+			}
 		}
 		else
 		{
 			param.constrain = PossionNoConstrain;
-		}
 
-		poisson_stiching(*dst, *src, rd, param);
+			poisson_stiching(*dst, *src, rd, param);
+		}
 	}
 	catch (bear::bear_exception e) {
 		std::cout<<e.what()<<std::endl;
