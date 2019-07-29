@@ -25,7 +25,7 @@ void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, matImagePtr border
 
 			if (border->at(0)[0].elm_size() == 1)
 			{
-				bear::tensor<unsigned char, 3> bd(dst->height(), dst->width(), dst->channel_size());
+				bear::tensor<unsigned char, 3> bd(dst->height(), 2, dst->channel_size());
 				param.panorama_border = bd;
 
 				PStichingVectorSrc bs(*border);
@@ -34,7 +34,7 @@ void go_poisson_stiching(imagePtr dstPtr, matImagePtr srcPtr, matImagePtr border
 			}
 			else
 			{
-				bear::tensor<unsigned short, 3> bd(dst->height(), dst->width(), dst->channel_size());
+				bear::tensor<unsigned short, 3> bd(dst->height(), 2, dst->channel_size());
 				param.panorama_border = bd;
 
 				PStichingVectorSrc bs(*border);

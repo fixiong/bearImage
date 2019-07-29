@@ -4,8 +4,10 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <string>
+#include <bear/ptr_algorism.h>
 
 #include "../include/possion_stiching.h"
+
 
 using namespace cv;
 using namespace std;
@@ -24,8 +26,23 @@ int main(){
 	int tileX = 2, tileY = 2;
 	int rd = 2;
 
-	vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
 
+	vector<Mat> border(tileY);
+
+	for (int y = 0; y < tileY; y++)
+	{
+		string name = "C:\\work\\images\\_r_";
+		name += to_string(y);
+		name += "\\p\\ctemp_0.tiff";
+		border[y] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
+	}
+
+	auto ab = map_function([](const Mat & m)
+	{
+		return const_dynamic_image_ptr(m);
+	}, border);
+
+	vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
 
 	for (int x = 0; x < tileX; x++)
 	{
@@ -35,7 +52,7 @@ int main(){
 			name += to_string(x);
 			name += '_';
 			name += to_string(y);
-			name += "\\channels\\ctemp_0.png";
+			name += "\\p\\ctemp_0.tiff";
 			src[y][x] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
 		}
 	}
@@ -52,14 +69,18 @@ int main(){
 		th += src[y][0].rows - rd * 2;
 	}
 
-	Mat dst(Size(tw, th), CV_16UC3, Scalar(0));
+	Mat dst(Size(tw, th), CV_8UC3, Scalar(0));
 
 	PStichingParam param;
 	param.iteration_time = 100;
-	param.constrain = PossionNoConstrain;
+
 
 	try
 	{
+		Mat border(Size(2, th), CV_8UC3, Scalar(0));
+		param.panorama_border = border;
+		make_panorama_border(border, ab);
+		param.constrain = PossionPanoramaBorderConstrain;
 		poisson_stiching(dst, src, rd, param);
 	}
 	catch (const bear_exception & e)
