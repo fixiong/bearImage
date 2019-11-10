@@ -1,7 +1,7 @@
 #include "../include/possion_stiching.h"
 #include "../include/possion_wrap.h"
 //#include "../include/bear/dynamic_image.h"
-#include "tiffio.h"
+#include <tiffio.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -86,9 +86,9 @@ unsigned int assimilate(const char* workDirPath ,const char* fileName ,unsigned 
 	vector<vector<bear::tensor<char, 3>>> mat(tNumY,vector<bear::tensor< char, 3>>(tNumX));
 	vector<vector<bear::dynamic_image_ptr>> srcMat(tNumY);
 
-	for (int idxResJ = 0; idxResJ < tNumY; idxResJ++)
+	for (int idxResJ = 0; idxResJ < (int)tNumY; idxResJ++)
 	{
-		for (int idxResI = 0; idxResI < tNumX; idxResI++)
+		for (int idxResI = 0; idxResI < (int)tNumX; idxResI++)
 		{
 			string picFilePath = string(workDirPath) + "/_";
 			picFilePath += to_string(idxResI) + "_" + to_string(idxResJ);
@@ -128,7 +128,7 @@ unsigned int assimilate(const char* workDirPath ,const char* fileName ,unsigned 
 				mat[idxResJ][idxResI] = bear::tensor<char, 3>(h, w, cn);
 			}
 	
-			for (int m = 0; m < h; m++)
+			for (int m = 0; m < (int)h; m++)
 			{
 				int suc = TIFFReadScanline(tiff, &mat[idxResJ][idxResI][m][0][0], m);
 				unsigned char r = mat[idxResJ][idxResI][m][0][0];
@@ -150,7 +150,6 @@ unsigned int assimilate(const char* workDirPath ,const char* fileName ,unsigned 
 				return 0;
 			}
 			srcMat[idxResJ].push_back(image);
-
 		}
 	}
 	width = width + 4;
@@ -175,7 +174,7 @@ unsigned int assimilate(const char* workDirPath ,const char* fileName ,unsigned 
 	if (mode){
 		vector<vector<bear::tensor<char, 3>>> mat(1, vector<bear::tensor< char, 3>>(param));
 		vector<vector<bear::dynamic_image_ptr>> borderMat(1);
-		for (int idxR = 0; idxR < param; idxR++)
+		for (int idxR = 0; idxR < (int)param; idxR++)
 		{
 			string picFilePath = string(workDirPath) + "/_r_";
 			picFilePath += to_string(idxR);
@@ -198,7 +197,7 @@ unsigned int assimilate(const char* workDirPath ,const char* fileName ,unsigned 
 				mat[0][idxR] = bear::tensor<char, 3>(h, w, cn);
 			}
 
-			for (int m = 0; m < h; m++)
+			for (int m = 0; m < (int)h; m++)
 			{
 				int suc = TIFFReadScanline(tiff, &mat[0][idxR][m][0][0], m);
 				if (suc != 1) {
@@ -258,7 +257,7 @@ unsigned int assimilate(const char* workDirPath ,const char* fileName ,unsigned 
 
 
 
-	for (int m = 0; m < height; m++)
+	for (int m = 0; m < (int)height; m++)
 	{
 		
 

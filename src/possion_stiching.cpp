@@ -917,7 +917,7 @@ void _make_panorama_border(
 
 void make_panorama_border(
 	bear::dynamic_image_ptr _border,
-	bear::array_ptr<bear::const_dynamic_image_ptr> _src)
+	bear::const_array_ptr<bear::const_dynamic_image_ptr> _src)
 {
 
 	if (1 == _border.elm_size())

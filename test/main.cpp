@@ -23,7 +23,7 @@ int main(){
 
 	printf("Main Entry\n");
 
-	int tileX = 2, tileY = 2;
+	int tileX = 5, tileY = 5;
 	int rd = 2;
 
 
@@ -31,9 +31,9 @@ int main(){
 
 	for (int y = 0; y < tileY; y++)
 	{
-		string name = "C:\\work\\images\\_r_";
+		string name = "C:\\work\\pictures\\4204\\_r_";
 		name += to_string(y);
-		name += "\\p\\ctemp_0.tiff";
+		name += "\\p\\result.tiff";
 		border[y] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
 	}
 
@@ -48,11 +48,11 @@ int main(){
 	{
 		for (int y = 0; y < tileY; y++)
 		{
-			string name = "C:\\work\\images\\_";
+			string name = "C:\\work\\pictures\\4204\\_";
 			name += to_string(x);
 			name += '_';
 			name += to_string(y);
-			name += "\\p\\ctemp_0.tiff";
+			name += "\\p\\result.tiff";
 			src[y][x] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
 		}
 	}

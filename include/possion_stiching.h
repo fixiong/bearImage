@@ -93,6 +93,6 @@ void poisson_stiching_check(
 
 void make_panorama_border(
 	bear::dynamic_image_ptr border,
-	bear::array_ptr<bear::const_dynamic_image_ptr> src);
+	bear::const_array_ptr<bear::const_dynamic_image_ptr> src);
 
 #endif
