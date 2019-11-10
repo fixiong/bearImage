@@ -25,7 +25,7 @@ void go_poisson_stiching(bear::dynamic_image_ptr* dst, std::vector<std::vector<b
 			}
 
 			if (border->at(0)[0].elm_size() == 1)
-			{
+			{ 
 				bear::tensor<unsigned char, 3> bd(dst->height(), 2, dst->channel_size());
 				param.panorama_border = bd;
 
