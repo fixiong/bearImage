@@ -79,6 +79,8 @@ struct PStichingVectorSrc
 void poisson_stiching(
 	bear::dynamic_image_ptr dst,
 	const PStichingVectorSrc &src,
+	bear::const_array_ptr<size_t> x_grid,
+	bear::const_array_ptr<size_t> y_grid,
 	size_t redundance,
 	PStichingParam param = PStichingParam());
 
@@ -87,6 +89,8 @@ void poisson_stiching_check(
 	std::vector<bear::image_point> error_block,
 	bear::const_array_ptr<bear::image_point> eliminate,
 	const PStichingVectorSrc &src,
+	bear::const_array_ptr<size_t> x_grid,
+	bear::const_array_ptr<size_t> y_grid,
 	size_t rd,
 	float th_cv,
 	float th_mse);

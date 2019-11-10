@@ -544,39 +544,57 @@ static void _poisson_stiching_a(
 
 }
 
-static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, size_t redundance)
+static image_size check_src(
+	const_tensor_ptr<const_dynamic_image_ptr, 2> src,
+	const_array_ptr<size_t> x_grid,
+	const_array_ptr<size_t> y_grid,
+	size_t redundance)
 {
 	if (0 == to_ptr(src).total_size())
 	{
 		throw bear_exception(exception_type::pointer_outof_range, "empty src!");
 	}
 
-	auto es = src[0][0].elm_size();
-
-	if (es != 1 && es != 2)
-	{
-		throw bear_exception(exception_type::other_error, "only support to 24bit or 48bit image!");
-	}
-
 	auto h = height(src);
 	auto w = width(src);
+	if (x_grid.size() != w + 1 || y_grid.size() != h + 1)
+	{
+		throw bear_exception(exception_type::pointer_outof_range, "wrong src size!");
+	}
 
-	vector<size_t> hs(h);
-	vector<size_t> ws(w);
+	size_t es = 0;
+
 
 	for (size_t y = 0; y < h; ++y)
 	{
-		hs[y] = src[y][0].height();
+		size_t oh = y_grid[y + 1]-y_grid[y];
+		if (y != 0)
+		{
+			oh += redundance;
+		}
+		if (y != h - 1)
+		{
+			oh += redundance;
+		}
 		for (size_t x = 0; x < w; ++x)
 		{
-			auto img =src[y][x];
-			if (0 == y)
+			size_t ow = x_grid[x + 1] - x_grid[x];
+			if (x != 0)
 			{
-				ws[x] = img.width();
+				ow += redundance;
+			}
+			if (x != w - 1)
+			{
+				ow += redundance;
+			}
+			auto img =src[y][x];
+
+			if (es == 0) {
+				es = img.elm_size();
 			}
 
-			if (ws[x] != img.width() ||
-				hs[y] != img.height() ||
+			if (ow != img.width() ||
+				oh != img.height() ||
 				es != img.elm_size())
 			{
 				throw bear_exception(exception_type::size_different, "src size inconsistence!");
@@ -584,18 +602,7 @@ static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, si
 		}
 	}
 
-	image_size ret(0,0);
-
-	to_ptr(hs).for_each([&ret](size_t s) {
-		ret.height += s;
-	});
-
-	to_ptr(ws).for_each([&ret](size_t s) {
-		ret.width += s;
-	});
-
-	ret.height -= redundance * (h - 1) * 2;
-	ret.width -= redundance * (w - 1) * 2;
+	image_size ret(x_grid.back(),y_grid.back());
 
 	if (ret.height > 1000000 || ret.width > 1000000)
 	{
@@ -610,10 +617,12 @@ static image_size check_src(const_tensor_ptr<const_dynamic_image_ptr, 2> src, si
 void poisson_stiching(
 	dynamic_image_ptr dst,
 	const PStichingVectorSrc &src,
+	const_array_ptr<size_t> x_grid,
+	const_array_ptr<size_t> y_grid,
 	size_t rd,
 	PStichingParam param)
 {
-	if (dst.size() != check_src(src.src, rd) || dst.elm_size() != src.src[0][0].elm_size())
+	if (dst.size() != check_src(src.src, x_grid, y_grid, rd) || dst.elm_size() != src.src[0][0].elm_size())
 	{
 		throw bear_exception(exception_type::size_different, "src dst size different!");
 	}
@@ -841,11 +850,13 @@ void poisson_stiching_check(
 	vector<image_point> error_block,
 	const_array_ptr<image_point> eliminate,
 	const PStichingVectorSrc &src,
+	const_array_ptr<size_t> x_grid,
+	const_array_ptr<size_t> y_grid,
 	size_t rd,
 	float th_cv,
 	float th_mse)
 {
-	check_src(src.src, rd);
+	check_src(src.src, x_grid, y_grid, rd);
 
 	if (1 == src.src[0][0].elm_size())
 	{

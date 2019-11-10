@@ -31,7 +31,7 @@ void go_poisson_stiching(bear::dynamic_image_ptr* dst, std::vector<std::vector<b
 
 				PStichingVectorSrc bs(*border);
 				make_panorama_border(bd, bs.src[0]);
-				poisson_stiching(*dst, *src, rd, param);
+				//poisson_stiching(*dst, *src, x_grid, y_grid, rd, param);
 			}
 			else
 			{
@@ -40,14 +40,14 @@ void go_poisson_stiching(bear::dynamic_image_ptr* dst, std::vector<std::vector<b
 
 				PStichingVectorSrc bs(*border);
 				make_panorama_border(bd, bs.src[0]);
-				poisson_stiching(*dst, *src, rd, param);
+				//poisson_stiching(*dst, *src, rd, param);
 			}
 		}
 		else
 		{
 			param.constrain = PossionNoConstrain;
 
-			poisson_stiching(*dst, *src, rd, param);
+			//poisson_stiching(*dst, *src, rd, param);
 		}
 	}
 	catch (bear::bear_exception e) {

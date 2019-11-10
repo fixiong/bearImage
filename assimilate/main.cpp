@@ -47,7 +47,7 @@ int main(int _argc, char *_argv[])
 		auto _full_y = arg[4];
 		auto _x_grid = arg[5];
 		auto _y_grid = arg[6];
-		auto _redundancy = arg[7];
+		auto _redundance = arg[7];
 		auto _mode = arg[8];
 		const_string_ptr _border_size;
 		const_string_ptr _border_width;
@@ -77,7 +77,7 @@ int main(int _argc, char *_argv[])
 		{
 			throw bear_exception(exception_type::other_error, "wrong grid size!");
 		}
-		auto redundancy = stoi(_redundancy);
+		auto redundance = stoi(_redundance);
 		Mode mode;
 		size_t border_size = 0;
 		size_t border_width = 0;
@@ -123,11 +123,11 @@ int main(int _argc, char *_argv[])
 			size_t _oh = y_right - y_left;
 			if (y != 0)
 			{
-				_oh += redundancy;
+				_oh += redundance;
 			}
 			if (y != full_y - 1)
 			{
-				_oh += redundancy;
+				_oh += redundance;
 			}
 
 			for (int x = 0; x < mx; x++)
@@ -153,11 +153,11 @@ int main(int _argc, char *_argv[])
 					ow = x_right - x_left;
 					if (x != 0)
 					{
-						ow += redundancy;
+						ow += redundance;
 					}
 					if (x != full_x - 1)
 					{
-						ow += redundancy;
+						ow += redundance;
 					}
 					oh = _oh;
 				}
@@ -277,7 +277,7 @@ int main(int _argc, char *_argv[])
 												 return const_dynamic_image_ptr(img);
 											 },
 											 border));
-				poisson_stiching(dst, images, redundancy, param);
+				poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
 			}
 			else
 			{
@@ -289,7 +289,7 @@ int main(int _argc, char *_argv[])
 												 return const_dynamic_image_ptr(img);
 											 },
 											 border));
-				poisson_stiching(dst, images, redundancy, param);
+				poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
 			}
 		}
 		else
@@ -297,7 +297,7 @@ int main(int _argc, char *_argv[])
 			PStichingParam param;
 			param.constrain = PossionNoConstrain;
 
-			poisson_stiching(dst, images, redundancy, param);
+			poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
 		}
 
 		string save_path = result_path;
