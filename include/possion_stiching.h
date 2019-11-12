@@ -76,6 +76,11 @@ struct PStichingVectorSrc
 	bear::tensor<bear::const_dynamic_image_ptr, 2> src;
 };
 
+void calculate_grid(const PStichingVectorSrc &src,
+	bear::array_ptr<size_t> x_grid,
+	bear::array_ptr<size_t> y_grid,
+	size_t rd);
+
 void poisson_stiching(
 	bear::dynamic_image_ptr dst,
 	const PStichingVectorSrc &src,

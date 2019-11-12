@@ -16,7 +16,13 @@ src/possion_stiching.cpp
 src/possion_wrap.cpp
 )
 
+SET(TEST_SRC_FILES 
+test/main.cpp
+)
+
 add_definitions(-std=c++14 -O3)
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
+
+add_executable(${PROJECT_NAME}_test ${TEST_SRC_FILES})
 

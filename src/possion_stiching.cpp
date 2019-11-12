@@ -13,22 +13,21 @@
 
 #include "possion_stiching_dif.hpp"
 
-
 using namespace bear;
 using namespace std;
 
-template<typename Image>
+template <typename Image>
 image<unsigned char, 1> mask_to_byte_inner(Image src)
 {
 	image<unsigned char, 1> ret;
-	zip_to<2>([](unsigned char &r, const_array_ptr<typename Image::elm_type> s)
-	{
+	zip_to<2>([](unsigned char &r, const_array_ptr<typename Image::elm_type> s) {
 		r = s[0] != 0 ? 255 : 0;
-	}, ret, src);
+	},
+			  ret, src);
 	return ret;
 }
 
-static image<unsigned char,1> mask_to_byte(const const_dynamic_image_ptr &mask)
+static image<unsigned char, 1> mask_to_byte(const const_dynamic_image_ptr &mask)
 {
 	if (mask.channel_size() == 1 && mask.elm_size() == 1)
 	{
@@ -50,7 +49,7 @@ static image<unsigned char,1> mask_to_byte(const const_dynamic_image_ptr &mask)
 	}
 }
 
-template<typename Image, typename ConstImage>
+template <typename Image, typename ConstImage>
 void mask_merg(
 	Image dst,
 	ConstImage src1,
@@ -60,11 +59,10 @@ void mask_merg(
 	using Unit = typename Image::elm_type;
 
 	zip_to<2>([](
-		array_ptr<Unit> d,
-		const_array_ptr<Unit> s1,
-		const_array_ptr<Unit> s2,
-		unsigned char m)
-	{
+				  array_ptr<Unit> d,
+				  const_array_ptr<Unit> s1,
+				  const_array_ptr<Unit> s2,
+				  unsigned char m) {
 		if (0 == m)
 		{
 			copy(d, s1);
@@ -73,28 +71,28 @@ void mask_merg(
 		{
 			copy(d, s2);
 		}
-	}, dst, src1, src2, mask);
+	},
+			  dst, src1, src2, mask);
 }
 
-template<typename Image, typename Ds>
+template <typename Image, typename Ds>
 static void stiching(Image dst, Ds ds, unsigned int ch)
 {
 	using Unit = typename Ds::elm_type;
 
 	zip_to<2>([ch](
-		array_ptr<typename Image::elm_type> d,
-		Unit s)
-	{
+				  array_ptr<typename Image::elm_type> d,
+				  Unit s) {
 		//typename Image::elm_type u = 128;
 		//_ZERO_PS<Unit>::to_unit(u, s);
 		//d[ch] = 255 - u;
 
 		_ZERO_PS<Unit>::to_unit(d[ch], s);
-
-	}, dst, ds);
+	},
+			  dst, ds);
 }
 
-template<typename Unit, typename Array>
+template <typename Unit, typename Array>
 static void estimate_border(Array &db, bool ring)
 {
 	using CT = decltype(db[0] + db[0]);
@@ -119,13 +117,13 @@ static void estimate_border(Array &db, bool ring)
 
 	auto avg = accumulate(acc.begin(), acc.end(), (CT)0) / (int)db.size();
 
-	map_function([avg](Unit &d, CT s)
-	{
+	map_function([avg](Unit &d, CT s) {
 		d = _ZERO_PS<Unit>::limite_zero(s - avg);
-	}, db, acc);
+	},
+				 db, acc);
 }
 
-template<typename Unit, typename Image, typename ConstImage>
+template <typename Unit, typename Image, typename ConstImage>
 static void _poisson_stiching_merged(
 	Image dst,
 	ConstImage src,
@@ -135,7 +133,6 @@ static void _poisson_stiching_merged(
 	copy(dst, src);
 
 	assert(width(src) == mask.width() && height(src) == mask.height());
-
 
 	image<Unit, 1> dx(width(dst), height(dst));
 	image<Unit, 1> dy(width(dst), height(dst));
@@ -165,7 +162,6 @@ void poisson_stiching_merged(
 		src.width() == dst.width() &&
 		src.height() == dst.height());
 
-
 	auto maskbuf = mask_to_byte(_mask);
 	const_image_ptr<unsigned char, 1> mask;
 	if (maskbuf.size())
@@ -192,7 +188,6 @@ void poisson_stiching_merged(
 				tensor_ptr<unsigned short, 3>(dst),
 				const_tensor_ptr<unsigned short, 3>(src),
 				mask, param);
-
 		}
 	}
 	else
@@ -209,12 +204,10 @@ void poisson_stiching_merged(
 			_poisson_stiching_merged<unsigned short>(
 				tensor_ptr<unsigned short, 3>(dst),
 				const_tensor_ptr<unsigned short, 3>(src),
-				mask,  param);
-
+				mask, param);
 		}
 	}
 }
-
 
 void poisson_stiching(
 	dynamic_image_ptr dst,
@@ -254,62 +247,70 @@ void poisson_stiching(
 	poisson_stiching_merged(dst, src1, mask, param);
 }
 
-
-template<typename Src, typename C>
-static void for_each_img(Src src,size_t rd, C && c)
+template <typename Src, typename C>
+static void for_each_img(Src src, size_t rd, const_array_ptr<size_t> x_grid, const_array_ptr<size_t> y_grid, C &&c)
 {
 	auto nw = width(src);
 	auto nh = height(src);
 
-	size_t cpy = 0;
 	for (size_t y = 0; y < nh; ++y)
 	{
+		auto y_left = y_grid[y];
+		auto y_right = y_grid[y + 1];
 
-		auto rh = height(src[y][0]);
-		auto bh = rh;
+		auto bh = y_right - y_left;
+		auto rh = bh;
 		size_t py = 0;
-
-		if (0 != y)
+		if (0 == y)
 		{
-			bh -= rd;
+			rh += rd;
+		}
+		else
+		{
 			py += rd;
 		}
 
-		if (nh - 1 != y) bh -= rd;
+		if (nh - 1 == y)
+		{
+			rh += rd;
+		}
 
-		size_t cpx = 0;
 		for (size_t x = 0; x < nw; ++x)
 		{
+			auto x_left = x_grid[x];
+			auto x_right = x_grid[x + 1];
 
-			auto rw = width(src[y][x]);
-			auto bw = rw;
+			auto bw = x_right - x_left;
+			auto rw = bw;
 			size_t px = 0;
-
-			if (0 != x)
+			if (0 == x)
 			{
-				bw -= rd;
+				rw += rd;
+			}
+			else
+			{
 				px += rd;
 			}
-
-			if (nw - 1 != x) bw -= rd;
+			if (nw - 1 == x)
+			{
+				rw += rd;
+			}
 
 			forward<C>(c)(
 				x, y,
 				image_size(bw, bh),
 				image_point(px, py),
-				image_point(cpx, cpy));
-
-			cpx += bw;
+				image_point(x_left, y_left));
 		}
-
-		cpy += bh;
 	}
 }
 
-template<typename Unit, typename Dst, typename Src, typename Border>
+template <typename Unit, typename Dst, typename Src, typename Border>
 static void _poisson_stiching_m(
 	Dst dst,
 	Src src,
+	const_array_ptr<size_t> x_grid,
+	const_array_ptr<size_t> y_grid,
 	Border border,
 	size_t rd,
 	PStichingParam param)
@@ -317,7 +318,6 @@ static void _poisson_stiching_m(
 	image<Unit, 1> dx(width(dst), height(dst));
 	image<Unit, 1> dy(width(dst), height(dst));
 	image<Unit, 1> ds(width(dst), height(dst));
-
 
 	tensor<typename Dst::elm_type, 3> srcXBorder(height(dst), 2, channel_size(dst));
 	{
@@ -339,13 +339,9 @@ static void _poisson_stiching_m(
 	for (int i = 0; i < size_at<2>(dst); ++i)
 	{
 		to_ptr(dx).fill(_ZERO_PS<Unit>::run());
-		for_each_img(src, rd, [&src, &dx, i, &param, rd](
-			size_t x, size_t y,
-			image_size bs,
-			image_point p,
-			image_point cp)
-		{
-			if (width(src) - 1 == x)return;
+		for_each_img(src, rd, x_grid, y_grid, [&src, &dx, i, &param, rd](size_t x, size_t y, image_size bs, image_point p, image_point cp) {
+			if (width(src) - 1 == x)
+				return;
 
 			auto sz = image_size(rd * 2, bs.height);
 
@@ -358,17 +354,13 @@ static void _poisson_stiching_m(
 			auto dst = to_ptr(dx).clip(image_rectangle(cp.x + bs.width - rd, cp.y, sz.width, sz.height));
 
 			x_d_p(dst, img1, img2, i, _ZERO_PS<Unit>());
-
 		});
 
-		to_ptr(dy).fill(_ZERO_PS<Unit>::run());;
-		for_each_img(src, rd, [&src, &dy, i, &param, rd](
-			size_t x, size_t y,
-			image_size bs,
-			image_point p,
-			image_point cp)
-		{
-			if (height(src) - 1 == y)return;
+		to_ptr(dy).fill(_ZERO_PS<Unit>::run());
+		;
+		for_each_img(src, rd, x_grid, y_grid, [&src, &dy, i, &param, rd](size_t x, size_t y, image_size bs, image_point p, image_point cp) {
+			if (height(src) - 1 == y)
+				return;
 
 			auto sz = image_size(bs.width, rd * 2);
 
@@ -407,7 +399,8 @@ static void _poisson_stiching_m(
 
 				map_function([](Unit &v1, Unit v2) {
 					v1 = (v1 + v2) / 2;
-				}, bd1, bd2);
+				},
+							 bd1, bd2);
 
 				estimate_border<Unit>(bd1, false);
 
@@ -466,8 +459,8 @@ static void _poisson_stiching_m(
 				if (param.constrain == PossionPanoramaBorderConstrain)
 				{
 
-
-					if (size_at<2>(border) != size_at<2>(dst) || height(border) != h || width(border) != 2) {
+					if (size_at<2>(border) != size_at<2>(dst) || height(border) != h || width(border) != 2)
+					{
 						throw bear_exception(exception_type::size_different, "wrong border size!");
 					}
 
@@ -487,14 +480,13 @@ static void _poisson_stiching_m(
 						{
 							hd = d3;
 						}
-						else if (y == h-1)
+						else if (y == h - 1)
 						{
 							ld = d3;
 						}
 						bx[y][0] = _ZERO_PS<Unit>::limite(bx[y][0] + d3 * -tp / bs);
 						bx[y][1] = _ZERO_PS<Unit>::limite(bx[y][1] + d3 * (bs - tp) / bs);
 					}
-
 
 					for (int x = 0; x < w; ++x)
 					{
@@ -510,38 +502,33 @@ static void _poisson_stiching_m(
 	}
 }
 
-template<typename Dst, typename Src, typename Border>
+template <typename Dst, typename Src, typename Border>
 static void _poisson_stiching_a(
 	Dst dst,
 	Src src,
+	const_array_ptr<size_t> x_grid,
+	const_array_ptr<size_t> y_grid,
 	Border bd,
 	size_t rd,
 	PStichingParam param)
 {
-	for_each_img(src, rd, [&dst, &src](
-		size_t x, size_t y,
-		image_size bs,
-		image_point p,
-		image_point cp
-		)
-	{
+	for_each_img(src, rd, x_grid, y_grid, [&dst, &src](size_t x, size_t y, image_size bs, image_point p, image_point cp) {
 		auto img = src[y][x];
 
-		auto s = clip_image(img, image_rectangle{ p, bs });
-		auto d = clip_image(dst, image_rectangle{ cp, bs });
+		auto s = clip_image(img, image_rectangle{p, bs});
+		auto d = clip_image(dst, image_rectangle{cp, bs});
 
 		copy(d, s);
 	});
 
 	if (param.float_precision)
 	{
-		_poisson_stiching_m<float>(dst, src, bd, rd, param);
+		_poisson_stiching_m<float>(dst, src, x_grid, y_grid, bd, rd, param);
 	}
 	else
 	{
-		_poisson_stiching_m<unsigned short>(dst, src, bd, rd, param);
+		_poisson_stiching_m<unsigned short>(dst, src, x_grid, y_grid, bd, rd, param);
 	}
-
 }
 
 static image_size check_src(
@@ -557,17 +544,16 @@ static image_size check_src(
 
 	auto h = height(src);
 	auto w = width(src);
-	if (x_grid.size() != w + 1 || y_grid.size() != h + 1)
+	if (x_grid.size() != w + 1 || y_grid.size() != h + 1 || x_grid[0] != 0 || y_grid[0] != 0)
 	{
 		throw bear_exception(exception_type::pointer_outof_range, "wrong src size!");
 	}
 
 	size_t es = 0;
 
-
 	for (size_t y = 0; y < h; ++y)
 	{
-		size_t oh = y_grid[y + 1]-y_grid[y];
+		size_t oh = y_grid[y + 1] - y_grid[y];
 		if (y != 0)
 		{
 			oh += redundance;
@@ -587,9 +573,10 @@ static image_size check_src(
 			{
 				ow += redundance;
 			}
-			auto img =src[y][x];
+			auto img = src[y][x];
 
-			if (es == 0) {
+			if (es == 0)
+			{
 				es = img.elm_size();
 			}
 
@@ -602,7 +589,7 @@ static image_size check_src(
 		}
 	}
 
-	image_size ret(x_grid.back(),y_grid.back());
+	image_size ret(x_grid.back(), y_grid.back());
 
 	if (ret.height > 1000000 || ret.width > 1000000)
 	{
@@ -612,7 +599,98 @@ static image_size check_src(
 	return ret;
 }
 
+void calculate_grid(const PStichingVectorSrc &src,
+					array_ptr<size_t> x_grid,
+					array_ptr<size_t> y_grid,
+					size_t rd)
+{
+	size_t w = width(src.src);
+	size_t h = height(src.src);
 
+	if (w != x_grid.size() - 1 || h != y_grid.size() - 1)
+	{
+		throw bear_exception(exception_type::size_different, "wrong grid size!");
+	}
+
+	vector<size_t> ws(w, 0);
+	vector<size_t> hs(h, 0);
+
+	for (size_t y = 0; y < h; ++y)
+	{
+		for (size_t x = 0; x < w; ++x)
+		{
+			auto img = src.src[y][x];
+			if (img.empty())
+			{
+				continue;
+			}
+
+			if (ws[x] == 0)
+			{
+				ws[x] = width(img);
+			}
+			else
+			{
+				if (ws[x] != width(img))
+				{
+					throw bear_exception(exception_type::size_different, "image width different!");
+				}
+			}
+
+			if (hs[y] == 0)
+			{
+				hs[y] = height(img);
+			}
+			else
+			{
+				if (hs[y] != height(img))
+				{
+					throw bear_exception(exception_type::size_different, "image height different!");
+				}
+			}
+		}
+	}
+
+	x_grid[0] = 0;
+	for (size_t x = 0; x < w; ++x)
+	{
+		size_t bw = ws[x];
+		if (bw == 0)
+		{
+			throw bear_exception(exception_type::other_error, "image width unknown!");
+		}
+		if (x != 0)
+		{
+			bw -= rd;
+		}
+		if (x != w - 1)
+		{
+			bw -= rd;
+		}
+
+		x_grid[x + 1] = x_grid[x] + bw;
+	}
+
+	y_grid[0] = 0;
+	for (size_t y = 0; y < h; ++y)
+	{
+		size_t bh = hs[y];
+		if (bh == 0)
+		{
+			throw bear_exception(exception_type::other_error, "image height unknown!");
+		}
+		if (y != 0)
+		{
+			bh -= rd;
+		}
+		if (y != h - 1)
+		{
+			bh -= rd;
+		}
+
+		y_grid[y + 1] = y_grid[y] + bh;
+	}
+}
 
 void poisson_stiching(
 	dynamic_image_ptr dst,
@@ -636,13 +714,12 @@ void poisson_stiching(
 		}
 		_poisson_stiching_a(
 			tensor_ptr<unsigned char, 3>(dst),
-			to_ptr(map_function([] (const const_dynamic_image_ptr & img) 
-				-> wrapper<const_tensor_ptr<unsigned char, 3>> 
-		{
-			return const_tensor_ptr<unsigned char, 3>(img);
-		}, src.src)),
-			bd,
-			rd,param);
+			to_ptr(map_function([](const const_dynamic_image_ptr &img)
+									-> wrapper<const_tensor_ptr<unsigned char, 3>> {
+				return const_tensor_ptr<unsigned char, 3>(img);
+			},
+								src.src)),
+			x_grid, y_grid, bd, rd, param);
 	}
 	else
 	{
@@ -653,17 +730,16 @@ void poisson_stiching(
 		}
 		_poisson_stiching_a(
 			tensor_ptr<unsigned short, 3>(dst),
-			to_ptr(map_function([](const const_dynamic_image_ptr & img)
-				-> wrapper<const_tensor_ptr<unsigned short, 3>>
-		{
-			return const_tensor_ptr<unsigned short, 3>(img);
-		}, src.src)),
-			bd,
-			rd, param);
+			to_ptr(map_function([](const const_dynamic_image_ptr &img)
+									-> wrapper<const_tensor_ptr<unsigned short, 3>> {
+				return const_tensor_ptr<unsigned short, 3>(img);
+			},
+								src.src)),
+			x_grid, y_grid, bd, rd, param);
 	}
 }
 
-template<typename Image>
+template <typename Image>
 static void covariance(
 	float &cv,
 	float &max_cv,
@@ -680,8 +756,7 @@ static void covariance(
 	unsigned long long eb = 0;
 	unsigned long long eapb = 0;
 
-	zip_to<3>([&](Unit r1, Unit r2 )
-	{
+	zip_to<3>([&](Unit r1, Unit r2) {
 		unsigned int a = r1;
 		unsigned int b = r2;
 		eab += a * b;
@@ -693,7 +768,8 @@ static void covariance(
 		int apb = a - b;
 
 		eapb += apb * apb;
-	}, img1, img2);
+	},
+			  img1, img2);
 
 	long long cab = eab - ea * eb;
 	unsigned long long caa = eaa - ea * ea;
@@ -708,7 +784,7 @@ static void covariance(
 	mse = (float)eapb * cad2;
 }
 
-template<typename Image>
+template <typename Image>
 inline float error_tt(
 	Image img1,
 	Image img2,
@@ -726,11 +802,13 @@ inline float error_tt(
 	return std::max(fcv, fmse);
 }
 
-template<typename Src>
+template <typename Src>
 void _poisson_stiching_check(
 	vector<image_point> &error_block,
 	const_array_ptr<image_point> eliminate,
 	Src src,
+	const_array_ptr<size_t> x_grid,
+	const_array_ptr<size_t> y_grid,
 	size_t rd,
 	float th_cv,
 	float th_mse)
@@ -744,13 +822,7 @@ void _poisson_stiching_check(
 	image<float, 1> dx(bw - 1, bh);
 	image<float, 1> dy(bw, bh - 1);
 
-	for_each_img(src, rd, [=, &dx, &dy](
-		size_t x, size_t y,
-		image_size bs,
-		image_point p,
-		image_point cp
-		)
-	{
+	for_each_img(src, rd, x_grid, y_grid, [=, &dx, &dy](size_t x, size_t y, image_size bs, image_point p, image_point cp) {
 		if (bw - 1 != x)
 		{
 			auto img1 = src[y][x];
@@ -785,8 +857,7 @@ void _poisson_stiching_check(
 
 	to_ptr(flag).fill((unsigned int)NORMAL_BLOCK);
 
-	to_ptr(eliminate).for_each([bw,bh,&flag](image_point p)
-	{
+	to_ptr(eliminate).for_each([bw, bh, &flag](image_point p) {
 		if ((unsigned int)p.x >= (unsigned int)bw || (unsigned int)p.y >= (unsigned int)bh)
 		{
 			throw bear_exception(exception_type::pointer_outof_range, "point outside image!");
@@ -806,7 +877,8 @@ void _poisson_stiching_check(
 		{
 			for (int x = 0; x < bw; ++x)
 			{
-				if (NORMAL_BLOCK != flag[y][x])continue;
+				if (NORMAL_BLOCK != flag[y][x])
+					continue;
 
 				float ce = 0;
 
@@ -839,7 +911,8 @@ void _poisson_stiching_check(
 			}
 		}
 
-		if (me < 0.5f)break;
+		if (me < 0.5f)
+			break;
 
 		flag[my][mx] = ERROR_BLOCK;
 		error_block.push_back(image_point(mx, my));
@@ -863,28 +936,28 @@ void poisson_stiching_check(
 		_poisson_stiching_check(
 			error_block,
 			eliminate,
-			to_ptr(map_function([](const const_dynamic_image_ptr & img)
-				-> wrapper<const_tensor_ptr<unsigned char, 3>>
-		{
-			return const_tensor_ptr<unsigned char, 3>(img);
-		}, src.src)),
-			rd, th_cv, th_mse);
+			to_ptr(map_function([](const const_dynamic_image_ptr &img)
+									-> wrapper<const_tensor_ptr<unsigned char, 3>> {
+				return const_tensor_ptr<unsigned char, 3>(img);
+			},
+								src.src)),
+			x_grid, y_grid, rd, th_cv, th_mse);
 	}
 	else
 	{
 		_poisson_stiching_check(
 			error_block,
 			eliminate,
-			to_ptr(map_function([](const const_dynamic_image_ptr & img)
-				-> wrapper<const_tensor_ptr<unsigned short, 3>>
-		{
-			return const_tensor_ptr<unsigned short, 3>(img);
-		}, src.src)),
-			rd, th_cv, th_mse);
+			to_ptr(map_function([](const const_dynamic_image_ptr &img)
+									-> wrapper<const_tensor_ptr<unsigned short, 3>> {
+				return const_tensor_ptr<unsigned short, 3>(img);
+			},
+								src.src)),
+			x_grid, y_grid, rd, th_cv, th_mse);
 	}
 }
 
-template<typename Image, typename Ary>
+template <typename Image, typename Ary>
 void _make_panorama_border(
 	Image border,
 	Ary src)
@@ -892,8 +965,7 @@ void _make_panorama_border(
 	size_t h = 0;
 	size_t w = 0;
 
-	to_ptr(src).for_each([&h,&w](Image img)
-	{
+	to_ptr(src).for_each([&h, &w](Image img) {
 		h += height(img);
 		if (w == 0)
 		{
@@ -914,17 +986,14 @@ void _make_panorama_border(
 	size_t xl = w / 2;
 	size_t xr = w / 2 - 1;
 
-	to_ptr(src).for_each([&y,&border,xl,xr](Image img)
-	{
-		for (size_t sy = 0; sy < height(img); ++sy,++y)
+	to_ptr(src).for_each([&y, &border, xl, xr](Image img) {
+		for (size_t sy = 0; sy < height(img); ++sy, ++y)
 		{
 			border[y][0] = img[sy][xl];
 			border[y][1] = img[sy][xr];
 		}
 	});
 }
-	
-
 
 void make_panorama_border(
 	bear::dynamic_image_ptr _border,
@@ -933,25 +1002,25 @@ void make_panorama_border(
 
 	if (1 == _border.elm_size())
 	{
-		 auto border = const_tensor_ptr<unsigned char, 3>(_border);
+		auto border = const_tensor_ptr<unsigned char, 3>(_border);
 
-		 auto src = map_function([](const const_dynamic_image_ptr & img)
-			 -> const_tensor_ptr<unsigned char, 3>
-		 {
-			 return const_tensor_ptr<unsigned char, 3>(img);
-		 }, _src);
+		auto src = map_function([](const const_dynamic_image_ptr &img)
+									-> const_tensor_ptr<unsigned char, 3> {
+			return const_tensor_ptr<unsigned char, 3>(img);
+		},
+								_src);
 
-		 _make_panorama_border(border, src);
+		_make_panorama_border(border, src);
 	}
 	else
 	{
 		auto border = const_tensor_ptr<unsigned short, 3>(_border);
 
-		auto src = map_function([](const const_dynamic_image_ptr & img)
-			-> const_tensor_ptr<unsigned short, 3>
-		{
+		auto src = map_function([](const const_dynamic_image_ptr &img)
+									-> const_tensor_ptr<unsigned short, 3> {
 			return const_tensor_ptr<unsigned short, 3>(img);
-		}, _src);
+		},
+								_src);
 
 		_make_panorama_border(border, src);
 	}
