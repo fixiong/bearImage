@@ -2,16 +2,9 @@
 #include <iostream>
 #include <tiffio.h>
 #include <string>
-#include <bear/ptr_algorism.h>
+#include <bear/image.h>
+#include <bear/dynamic_image.h>
 #include <bear/functor.h>
-
-#include "../include/possion_stiching.h"
-
-enum Mode
-{
-	ModeNormal,
-	ModePanorama,
-};
 
 using namespace std;
 using namespace bear;
@@ -33,14 +26,7 @@ int main(int argc, char *argv[])
 		const_string_ptr _x_grid = argv[6];
 		const_string_ptr _y_grid = argv[7];
 		const_string_ptr _redundance = argv[8];
-		const_string_ptr _mode = argv[9];
-		const_string_ptr _border_size;
-		const_string_ptr _border_width;
-		if (argc > 11)
-		{
-			_border_size = argv[10];
-			_border_width = argv[11];
-		}
+		const_string_ptr _max_size = argv[9];
 
 		auto path = _path;
 		auto result_path = _result_path;
@@ -63,27 +49,7 @@ int main(int argc, char *argv[])
 			throw bear_exception(exception_type::other_error, "wrong grid size!");
 		}
 		auto redundance = stoi(_redundance);
-		Mode mode;
-		size_t border_size = 0;
-		size_t border_width = 0;
-		if (_mode == "normal")
-		{
-			mode = ModeNormal;
-		}
-		else if (_mode == "panorama")
-		{
-			if (_border_size.empty() || _border_width.empty())
-			{
-				throw bear_exception(exception_type::other_error, "wrong panamorma argument!");
-			}
-			mode = ModePanorama;
-			border_size = stoi(_border_size);
-			border_width = stoi(_border_width);
-		}
-		else
-		{
-			throw bear_exception(exception_type::other_error, "wrong mode!");
-		}
+		auto max_size = stoi(_max_size);
 
 		auto dw = x_grid.back();
 		auto dh = y_grid.back();
@@ -93,58 +59,33 @@ int main(int argc, char *argv[])
 		uint16 cn, depth;
 		auto found = false;
 
-		vector<dynamic_image> border(border_size);
-
-		auto mx = full_x;
-		if (mode == ModePanorama)
-		{
-			mx += 1;
-		}
-
 		for (int y = 0; y < full_y; y++)
 		{
 			size_t y_left = y_grid[y];
 			size_t y_right = y_grid[y + 1];
-			size_t _oh = y_right - y_left;
+			size_t oh = y_right - y_left;
 			if (y != 0)
 			{
-				_oh += redundance;
+				oh += redundance;
 			}
 			if (y != full_y - 1)
 			{
-				_oh += redundance;
+				oh += redundance;
 			}
 
-			for (int x = 0; x < mx; x++)
+			for (int x = 0; x < full_x; x++)
 			{
-				size_t x_left;
-				size_t x_right;
-				size_t ow;
-				size_t oh;
-				string file_path;
-				if (x == full_x)
+				auto file_path = string(path) + "/_" + to_string(x) + "_" + to_string(y) + "/" + string(file);
+				size_t x_left = x_grid[x];
+				size_t x_right = x_grid[x + 1];
+				size_t ow = x_right - x_left;
+				if (x != 0)
 				{
-					file_path = string(path) + "/_r_" + to_string(y) + "/" + string(file);
-					x_left = 0;
-					x_right = border_width;
-					ow = border_size;
-					oh = y_right - y_left;
+					ow += redundance;
 				}
-				else
+				if (x != full_x - 1)
 				{
-					file_path = string(path) + "/_" + to_string(x) + "_" + to_string(y) + "/" + string(file);
-					x_left = x_grid[x];
-					x_right = x_grid[x + 1];
-					ow = x_right - x_left;
-					if (x != 0)
-					{
-						ow += redundance;
-					}
-					if (x != full_x - 1)
-					{
-						ow += redundance;
-					}
-					oh = _oh;
+					ow += redundance;
 				}
 
 				TIFF *tiff = TIFFOpen(file_path.c_str(), "r");
@@ -231,74 +172,17 @@ int main(int argc, char *argv[])
 					}
 				}
 
-				if (x == full_x)
-				{
-					border[y] = move(img);
-				}
-				else
-				{
-					images[y][x] = move(img);
-				}
+				images[y][x] = move(img);
 			}
 		}
+
+		dynamic_image dst(dw, dh, 3, image_unsigned_int_type, 1);
 
 		if (!found)
 		{
-			throw bear_exception(exception_type::other_error, "file not found!");
+
 		}
 
-		dynamic_image dst(dw, dh, cn, image_unsigned_int_type, depth / 8);
-
-		if (mode == ModePanorama)
-		{
-			PStichingParam param;
-			param.iteration_time = 100;
-			param.constrain = PossionPanoramaBorderConstrain;
-			dynamic_image bd(dw, dh, cn, image_unsigned_int_type, depth / 8);
-			param.panorama_border = bd;
-			auto bdpt = map_function([](const dynamic_image &img) {
-				return const_dynamic_image_ptr(img);
-			}, border);
-			
-			make_panorama_border(bd, bdpt);
-			poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
-		}
-		else
-		{
-			PStichingParam param;
-			param.iteration_time = 100;
-			param.constrain = PossionNoConstrain;
-
-			poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
-		}
-
-		string save_path = result_path;
-		save_path += "/";
-		save_path += file;
-		//cout << save_path;
-		TIFF *out = TIFFOpen(save_path.c_str(), "w");
-		defer df([=]() {
-			TIFFClose(out);
-		});
-
-		uint16 compression = COMPRESSION_LZW; //
-		TIFFSetField(out, TIFFTAG_IMAGEWIDTH, dw);
-		TIFFSetField(out, TIFFTAG_IMAGELENGTH, dh);
-		TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
-		TIFFSetField(out, TIFFTAG_COMPRESSION, compression);
-		TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, depth);
-		TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, cn);
-		TIFFSetField(out, TIFFTAG_PHOTOMETRIC, photoMetric);
-		TIFFSetField(out, TIFFTAG_PLANARCONFIG, planarConfig);
-
-		for (size_t m = 0; m < dh; m++)
-		{
-			int suc = TIFFWriteScanline(out, scanline(dst, m).data(), (unsigned int)m);
-			if (suc != 1)
-			{
-				throw bear_exception(exception_type::other_error, "save result failed!");
-			}
-		}
 	}
 	catch (const exception &e)
 	{
