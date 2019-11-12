@@ -13,7 +13,6 @@ SET(SRC_FILES
 src/utility.cpp
 src/possion_solver.cpp
 src/possion_stiching.cpp
-src/possion_wrap.cpp
 )
 
 SET(ASSIMILATOR_FILES 

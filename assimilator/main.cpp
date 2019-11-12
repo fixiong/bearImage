@@ -15,46 +15,30 @@ enum Mode
 using namespace std;
 using namespace bear;
 
-int main(int _argc, char *_argv[])
+int main(int argc, char *argv[])
 {
-
 	try
 	{
-		vector<const_string_ptr> arg;
-
-		for (int i = 1; i < _argc; ++i)
-		{
-			auto a = const_string_ptr(_argv[i]);
-
-			auto splt = a.split(' ');
-			arg.push_back(splt.first);
-			while (!splt.second.empty())
-			{
-				splt = splt.second.split(' ');
-				arg.push_back(splt.first);
-			}
-		}
-
-		if (arg.size() < 9)
+		if (argc < 10)
 		{
 			throw bear_exception(exception_type::other_error, "wrong argument!");
 		}
 
-		auto _path = arg[0];
-		auto _file = arg[1];
-		auto _result_path = arg[2];
-		auto _full_x = arg[3];
-		auto _full_y = arg[4];
-		auto _x_grid = arg[5];
-		auto _y_grid = arg[6];
-		auto _redundance = arg[7];
-		auto _mode = arg[8];
+		const_string_ptr _path = argv[1];
+		const_string_ptr _file = argv[2];
+		const_string_ptr _result_path = argv[3];
+		const_string_ptr _full_x = argv[4];
+		const_string_ptr _full_y = argv[5];
+		const_string_ptr _x_grid = argv[6];
+		const_string_ptr _y_grid = argv[7];
+		const_string_ptr _redundance = argv[8];
+		const_string_ptr _mode = argv[9];
 		const_string_ptr _border_size;
 		const_string_ptr _border_width;
-		if (arg.size() > 10)
+		if (argc > 11)
 		{
-			_border_size = arg[9];
-			_border_width = arg[10];
+			_border_size = argv[10];
+			_border_width = argv[11];
 		}
 
 		auto path = _path;
@@ -266,35 +250,19 @@ int main(int _argc, char *_argv[])
 			PStichingParam param;
 			param.iteration_time = 100;
 			param.constrain = PossionPanoramaBorderConstrain;
-
-			if (depth == 8)
-			{
-				bear::tensor<unsigned char, 3> bd(dh, dw, cn);
-				param.panorama_border = bd;
-
-				make_panorama_border(bd, map_function(
-											 [](const dynamic_image &img) {
-												 return const_dynamic_image_ptr(img);
-											 },
-											 border));
-				poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
-			}
-			else
-			{
-				bear::tensor<unsigned short, 3> bd(dh, dw, cn);
-				param.panorama_border = bd;
-
-				make_panorama_border(bd, map_function(
-											 [](const dynamic_image &img) {
-												 return const_dynamic_image_ptr(img);
-											 },
-											 border));
-				poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
-			}
+			dynamic_image bd(dw, dh, cn, image_unsigned_int_type, depth / 8);
+			param.panorama_border = bd;
+			auto bdpt = map_function([](const dynamic_image &img) {
+				return const_dynamic_image_ptr(img);
+			}, border);
+			
+			make_panorama_border(bd, bdpt);
+			poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
 		}
 		else
 		{
 			PStichingParam param;
+			param.iteration_time = 100;
 			param.constrain = PossionNoConstrain;
 
 			poisson_stiching(dst, images, x_grid, y_grid, redundance, param);
