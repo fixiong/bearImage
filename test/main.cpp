@@ -55,7 +55,10 @@ int main(){
 				name += '_';
 				name += to_string(y);
 				name += "\\VRayWireColor.tiff";
-				src[y][x] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
+				try {
+					src[y][x] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
+				}
+				catch (...) {}
 			}
 		}
 		int tw = rd * 2;
@@ -86,6 +89,17 @@ int main(){
 		vector<size_t> y_grid(tileY + 1);
 		calculate_grid(src, x_grid, y_grid, rd);
 		poisson_stiching(dst, src, x_grid, y_grid, rd, param);
+
+		cout << endl;
+		for_each(to_ptr(x_grid), [](auto s) 
+		{
+			cout << s << "_";
+		});
+		cout << endl;
+		for_each(to_ptr(y_grid), [](auto s)
+		{
+			cout << s << "_";
+		});
 
 		//vector<image_point> error;
 

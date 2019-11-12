@@ -9,7 +9,7 @@
 enum Mode
 {
 	ModeNormal,
-	ModePananorma,
+	ModePanorama,
 };
 
 using namespace std;
@@ -85,13 +85,13 @@ int main(int _argc, char *_argv[])
 		{
 			mode = ModeNormal;
 		}
-		else if (_mode == "pananorma")
+		else if (_mode == "panorama")
 		{
 			if (_border_size.empty() || _border_width.empty())
 			{
 				throw bear_exception(exception_type::other_error, "wrong panamorma argument!");
 			}
-			mode = ModePananorma;
+			mode = ModePanorama;
 			border_size = stoi(_border_size);
 			border_width = stoi(_border_width);
 		}
@@ -111,7 +111,7 @@ int main(int _argc, char *_argv[])
 		vector<dynamic_image> border(border_size);
 
 		auto mx = full_x;
-		if (mode == ModePananorma)
+		if (mode == ModePanorama)
 		{
 			mx += 1;
 		}
@@ -261,7 +261,7 @@ int main(int _argc, char *_argv[])
 
 		dynamic_image dst(dw, dh, cn, image_unsigned_int_type, depth / 8);
 
-		if (mode == ModePananorma)
+		if (mode == ModePanorama)
 		{
 			PStichingParam param;
 			param.iteration_time = 100;
@@ -303,6 +303,7 @@ int main(int _argc, char *_argv[])
 		string save_path = result_path;
 		save_path += "/";
 		save_path += file;
+		//cout << save_path;
 		TIFF *out = TIFFOpen(save_path.c_str(), "w");
 
 		uint16 compression = COMPRESSION_LZW; //

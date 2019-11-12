@@ -336,7 +336,7 @@ static void _poisson_stiching_m(
 		}
 	}
 
-	for (int i = 0; i < size_at<2>(dst); ++i)
+	for (int i = 0; i < channel_size(dst); ++i)
 	{
 		to_ptr(dx).fill(_ZERO_PS<Unit>::run());
 		for_each_img(src, rd, x_grid, y_grid, [&src, &dx, i, &param, rd](size_t x, size_t y, image_size bs, image_point p, image_point cp) {
@@ -347,6 +347,11 @@ static void _poisson_stiching_m(
 
 			auto img1 = src[y][x];
 			auto img2 = src[y][x + 1];
+
+			if (img1.empty() || img2.empty())
+			{
+				return;
+			}
 
 			img1 = clip_image(img1, image_rectangle(width(img1) - rd * 2, p.y, sz.width, sz.height));
 			img2 = clip_image(img2, image_rectangle(0, p.y, sz.width, sz.height));
@@ -366,6 +371,11 @@ static void _poisson_stiching_m(
 
 			auto img1 = src[y][x];
 			auto img2 = src[y + 1][x];
+
+			if (img1.empty() || img2.empty())
+			{
+				return;
+			}
 
 			img1 = clip_image(img1, image_rectangle(p.x, height(img1) - rd * 2, sz.width, sz.height));
 			img2 = clip_image(img2, image_rectangle(p.x, 0, sz.width, sz.height));
@@ -459,7 +469,7 @@ static void _poisson_stiching_m(
 				if (param.constrain == PossionPanoramaBorderConstrain)
 				{
 
-					if (size_at<2>(border) != size_at<2>(dst) || height(border) != h || width(border) != 2)
+					if (channel_size(border) != channel_size(dst) || height(border) != h || width(border) != 2)
 					{
 						throw bear_exception(exception_type::size_different, "wrong border size!");
 					}
@@ -513,12 +523,18 @@ static void _poisson_stiching_a(
 	PStichingParam param)
 {
 	for_each_img(src, rd, x_grid, y_grid, [&dst, &src](size_t x, size_t y, image_size bs, image_point p, image_point cp) {
-		auto img = src[y][x];
-
-		auto s = clip_image(img, image_rectangle{p, bs});
 		auto d = clip_image(dst, image_rectangle{cp, bs});
 
-		copy(d, s);
+		auto img = src[y][x];
+		if (img.empty())
+		{
+			d.fill(0);
+		}
+		else
+		{
+			auto s = clip_image(img, image_rectangle{ p, bs });
+			copy(d, s);
+		}
 	});
 
 	if (param.float_precision)
@@ -564,6 +580,7 @@ static image_size check_src(
 		}
 		for (size_t x = 0; x < w; ++x)
 		{
+
 			size_t ow = x_grid[x + 1] - x_grid[x];
 			if (x != 0)
 			{
@@ -574,6 +591,10 @@ static image_size check_src(
 				ow += redundance;
 			}
 			auto img = src[y][x];
+			if (height(img) == 0)
+			{
+				continue;
+			}
 
 			if (es == 0)
 			{
