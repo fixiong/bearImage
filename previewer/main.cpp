@@ -6,6 +6,7 @@
 #include <bear/image.h>
 #include <bear/dynamic_image.h>
 #include <bear/functor.h>
+#include <io.h>
 
 using namespace std;
 using namespace bear;
@@ -16,8 +17,6 @@ using image_t = image<unsigned char, 3>;
 image_t make_preview(
 	string path,
 	const_string_ptr file,
-	size_t full_x,
-	size_t full_y,
 	const_array_ptr<size_t> x_grid,
 	const_array_ptr<size_t> y_grid,
 	size_t redundance,
@@ -25,8 +24,10 @@ image_t make_preview(
 	size_t dst_width,
 	size_t dst_height)
 {
-	auto dw = x_grid.back();
-	auto dh = y_grid.back();
+	auto full_width = x_grid.back();
+	auto full_height = y_grid.back();
+	auto full_x = x_grid.size() - 1;
+	auto full_y = y_grid.size() - 1;
 
 	tensor<image_t, 2> images(full_y, full_x);
 	auto found = false;
@@ -47,7 +48,7 @@ image_t make_preview(
 
 		for (int x = 0; x < full_x; x++)
 		{
-			auto base_path = path + "/_" + to_string(x) + "_" + to_string(y);
+			auto base_path = path + "_" + to_string(x) + "_" + to_string(y);
 			auto file_path = base_path + "/" + string(file);
 			size_t x_left = x_grid[x];
 			size_t x_right = x_grid[x + 1];
@@ -61,40 +62,18 @@ image_t make_preview(
 				ow += redundance;
 			}
 
-			TIFF *tiff = TIFFOpen(file_path.c_str(), "r");
-			if (tiff == NULL)
+			try
 			{
-				vector<size_t> sub_x_grid;
-				for (int i = 0; i < sub_divide + 1; ++i)
+				_finddata_t d;
+				if (-1 == _findfirst(file_path.c_str(), &d))
 				{
-					sub_x_grid.push_back(i * ow / sub_divide);
+					throw bear_exception(exception_type::other_error, "");
 				}
-
-				vector<size_t> sub_y_grid;
-				for (int i = 0; i < sub_divide + 1; ++i)
+				TIFF *tiff = TIFFOpen(file_path.c_str(), "r");
+				if (tiff == NULL)
 				{
-					sub_y_grid.push_back(i * oh / sub_divide);
+					throw bear_exception(exception_type::other_error, "unknown file io failed!");
 				}
-
-				images[y][x] = make_preview(
-					base_path,
-					file,
-					ow,
-					oh,
-					sub_x_grid,
-					sub_y_grid,
-					redundance,
-					sub_divide,
-					ow,
-					oh);
-
-				if (!images[y][x].empty())
-				{
-					found = true;
-				}
-			}
-			else
-			{
 				defer df([=]() {
 					TIFFClose(tiff);
 				});
@@ -109,12 +88,26 @@ image_t make_preview(
 
 				if (cn < 3 || (depth != 8 && depth != 16))
 				{
-					continue;
+					throw bear_exception(
+						exception_type::other_error,
+						"unsupported format:",
+						to_string(cn),
+						" ",
+						to_string(depth));
 				}
 
 				if (w != ow || h != oh)
 				{
-					continue;
+					throw bear_exception(
+						exception_type::other_error,
+						"wrong image size:",
+						to_string(x),
+						" ",
+						to_string(y),
+						" ",
+						to_string(w),
+						" ",
+						to_string(h));
 				}
 
 				image_t oimg(w, h);
@@ -181,6 +174,46 @@ image_t make_preview(
 
 				images[y][x] = move(oimg);
 				found = true;
+
+
+			}
+			catch (bear_exception e)
+			{
+				if (!e.what().empty())
+				{
+					cout << e.what();
+				}
+
+				_finddata_t d;
+				if (-1 != _findfirst((base_path + "_*").c_str(), &d))
+				{
+					vector<size_t> sub_x_grid;
+					for (int i = 0; i < sub_divide + 1; ++i)
+					{
+						sub_x_grid.push_back(i * ow / sub_divide);
+					}
+
+					vector<size_t> sub_y_grid;
+					for (int i = 0; i < sub_divide + 1; ++i)
+					{
+						sub_y_grid.push_back(i * oh / sub_divide);
+					}
+
+					images[y][x] = make_preview(
+						base_path,
+						file,
+						sub_x_grid,
+						sub_y_grid,
+						redundance,
+						sub_divide,
+						ow,
+						oh);
+
+					if (!images[y][x].empty())
+					{
+						found = true;
+					}
+				}
 			}
 		}
 	}
@@ -196,7 +229,7 @@ image_t make_preview(
 	size_t current_y_grid = 0;
 	for (size_t y = 0; y < height(dst); ++y)
 	{
-		size_t sy = y * dh / height(dst);
+		size_t sy = y * full_height / height(dst);
 		while (y_grid[current_y_grid + 1] <= sy)
 		{
 			++current_y_grid;
@@ -210,16 +243,24 @@ image_t make_preview(
 		auto drow = dst[y];
 		auto xrows = map_function([=](const image_t &imgs)
 		{
+			if (imgs.empty())
+			{
+				return decltype(imgs[sy])();
+			}
 			return imgs[sy];
 		}, images[current_y_grid]);
 
 		size_t current_x_grid = 0;
 		for (size_t x = 0; x < width(dst); ++x)
 		{
-			size_t sx = x * dw / width(dst);
+			size_t sx = x * full_width / width(dst);
 			while (x_grid[current_x_grid + 1] <= sx)
 			{
 				++current_x_grid;
+			}
+			if (xrows[current_x_grid].empty())
+			{
+				continue;
 			}
 			sx -= x_grid[current_x_grid];
 			if (current_x_grid != 0)
@@ -286,7 +327,7 @@ int main(int argc, char *argv[])
 {
 	try
 	{
-		if (argc < 11)
+		if (argc < 9)
 		{
 			throw bear_exception(exception_type::other_error, "wrong argument!");
 		}
@@ -294,19 +335,15 @@ int main(int argc, char *argv[])
 		const_string_ptr _path = argv[1];
 		const_string_ptr _file = argv[2];
 		const_string_ptr _result_path = argv[3];
-		const_string_ptr _full_x = argv[4];
-		const_string_ptr _full_y = argv[5];
-		const_string_ptr _x_grid = argv[6];
-		const_string_ptr _y_grid = argv[7];
-		const_string_ptr _redundance = argv[8];
-		const_string_ptr _sub_divide = argv[9];
-		const_string_ptr _max_size = argv[10];
+		const_string_ptr _x_grid = argv[4];
+		const_string_ptr _y_grid = argv[5];
+		const_string_ptr _redundance = argv[6];
+		const_string_ptr _sub_divide = argv[7];
+		const_string_ptr _max_size = argv[8];
 
 		auto path = _path;
 		auto result_path = _result_path;
 		auto file = _file;
-		auto full_x = stoi(_full_x);
-		auto full_y = stoi(_full_y);
 		auto x_grid = map_function(
 			[](auto s) {
 				return string_cast<size_t>(s);
@@ -317,11 +354,6 @@ int main(int argc, char *argv[])
 				return string_cast<size_t>(s);
 			},
 			split(_y_grid, '_'));
-
-		if (x_grid.size() != full_x + 1 || y_grid.size() != full_y + 1)
-		{
-			throw bear_exception(exception_type::other_error, "wrong grid size!");
-		}
 		auto redundance = stoi(_redundance);
 		auto sub_divide = stoi(_sub_divide);
 		auto max_size = stoi(_max_size);
@@ -349,10 +381,8 @@ int main(int argc, char *argv[])
 		}
 
 		auto dst = make_preview(
-			path,
+			string(path) + "/",
 			file,
-			full_x,
-			full_y,
 			x_grid,
 			y_grid,
 			redundance,

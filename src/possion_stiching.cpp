@@ -986,7 +986,7 @@ void _make_panorama_border(
 	size_t h = 0;
 	size_t w = 0;
 
-	to_ptr(src).for_each([&h, &w](Image img) {
+	to_ptr(src).for_each([&h, &w](typename Image::const_self img) {
 		h += height(img);
 		if (w == 0)
 		{
@@ -1007,11 +1007,17 @@ void _make_panorama_border(
 	size_t xl = w / 2;
 	size_t xr = w / 2 - 1;
 
-	to_ptr(src).for_each([&y, &border, xl, xr](Image img) {
+	border.fill(0);
+
+	to_ptr(src).for_each([&y, &border, xl, xr](typename Image::const_self img) {
+		if (img.empty())
+		{
+			return;
+		}
 		for (size_t sy = 0; sy < height(img); ++sy, ++y)
 		{
-			border[y][0] = img[sy][xl];
-			border[y][1] = img[sy][xr];
+			copy(border[y][0],img[sy][xl]);
+			copy(border[y][1],img[sy][xr]);
 		}
 	});
 }
@@ -1023,7 +1029,7 @@ void make_panorama_border(
 
 	if (1 == _border.elm_size())
 	{
-		auto border = const_tensor_ptr<unsigned char, 3>(_border);
+		auto border = tensor_ptr<unsigned char, 3>(_border);
 
 		auto src = map_function([](const const_dynamic_image_ptr &img)
 									-> const_tensor_ptr<unsigned char, 3> {
@@ -1035,7 +1041,7 @@ void make_panorama_border(
 	}
 	else
 	{
-		auto border = const_tensor_ptr<unsigned short, 3>(_border);
+		auto border = tensor_ptr<unsigned short, 3>(_border);
 
 		auto src = map_function([](const const_dynamic_image_ptr &img)
 									-> const_tensor_ptr<unsigned short, 3> {
