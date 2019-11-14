@@ -6,10 +6,11 @@
 #include <bear/image.h>
 #include <bear/dynamic_image.h>
 #include <bear/functor.h>
-#include <io.h>
+#include <boost/filesystem.hpp>
 
 using namespace std;
 using namespace bear;
+using namespace boost;
 
 
 using image_t = image<unsigned char, 3>;
@@ -64,8 +65,7 @@ image_t make_preview(
 
 			try
 			{
-				_finddata_t d;
-				if (-1 == _findfirst(file_path.c_str(), &d))
+				if (!filesystem::exists(file_path))
 				{
 					throw bear_exception(exception_type::other_error, "");
 				}
@@ -183,6 +183,8 @@ image_t make_preview(
 				{
 					cout << e.what();
 				}
+
+				filesystem::
 
 				_finddata_t d;
 				if (-1 != _findfirst((base_path + "_*").c_str(), &d))

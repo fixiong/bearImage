@@ -3,6 +3,7 @@ PROJECT(bearimage)
 
 message("${BEAR_DIR}")
 find_package(TIFF)
+find_package(JPEG)
 
 INCLUDE_DIRECTORIES(                          
      include
@@ -19,10 +20,17 @@ SET(ASSIMILATOR_FILES
 assimilator/main.cpp
 )
 
+SET(PREVIEWER_FILES 
+previewer/main.cpp
+)
+
 add_definitions(-std=c++14 -O3)
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
 add_executable( assimilator ${ASSIMILATOR_FILES} )
 target_link_libraries( assimilator ${TIFF_LIBRARY} ${PROJECT_NAME} )
+
+add_executable( previewer ${PREVIEWER_FILES} )
+target_link_libraries( previewer ${TIFF_LIBRARY} ${JPEG_LIBRARY} ${PROJECT_NAME} )
 
