@@ -4,7 +4,7 @@
 #include <string>
 #include <bear/ptr_algorism.h>
 #include <bear/functor.h>
-#include <io.h>
+#include <boost/filesystem.hpp>
 
 #include "../include/possion_stiching.h"
 
@@ -22,9 +22,10 @@ struct GlobalFormat {
 
 using namespace std;
 using namespace bear;
+using namespace boost::filesystem;
 
 dynamic_image assimulate(
-	string path,
+	path main_path,
 	const_string_ptr file,
 	const_array_ptr<size_t> x_grid,
 	const_array_ptr<size_t> y_grid,
@@ -36,6 +37,11 @@ dynamic_image assimulate(
 	size_t border_width,
 	bool complete)
 {
+	if (!exists(main_path))
+	{
+		return dynamic_image();
+	}
+
 	auto full_width = x_grid.back();
 	auto full_height = y_grid.back();
 	auto full_x = x_grid.size() - 1;
@@ -70,16 +76,16 @@ dynamic_image assimulate(
 		{
 			size_t bw = x_grid[x + 1] - x_grid[x];
 			size_t rw = bw;
-			string base_path;
+			path base_path;
 			if (x == full_x)
 			{
-				base_path = string(path) + "_r_" + to_string(y);
+				base_path = main_path / ( "_r_" + to_string(y));
 				bw = rw = border_width;
 				rh = bh;
 			}
 			else
 			{
-				base_path = string(path) + "_" + to_string(x) + "_" + to_string(y);
+				base_path = main_path / ("_" + to_string(x) + "_" + to_string(y));
 				if (x != 0)
 				{
 					rw += redundance;
@@ -90,19 +96,13 @@ dynamic_image assimulate(
 				}
 			}
 
-			string file_path = base_path + "/" + string(file);
+			auto file_path = base_path / string(file);
 
 			dynamic_image img;
 
-			_finddata_t d;
-			if (-1 == _findfirst(file_path.c_str(), &d))
+			
+			if (!exists(file_path))
 			{
-				if (-1 == _findfirst((base_path + "_*").c_str(), &d))
-				{
-					lost = true;
-					continue;
-				}
-
 				vector<size_t> sub_x_grid;
 				for (int i = 0; i < sub_divide + 1; ++i)
 				{
@@ -131,7 +131,7 @@ dynamic_image assimulate(
 			}
 			else
 			{
-				TIFF *tiff = TIFFOpen(file_path.c_str(), "r");
+				TIFF *tiff = TIFFOpen(file_path.string().c_str(), "r");
 				if (tiff == NULL)
 				{
 					cout << "read file failed!";

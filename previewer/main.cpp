@@ -10,13 +10,13 @@
 
 using namespace std;
 using namespace bear;
-using namespace boost;
+using namespace boost::filesystem;
 
 
 using image_t = image<unsigned char, 3>;
 
 image_t make_preview(
-	string path,
+	path main_path,
 	const_string_ptr file,
 	const_array_ptr<size_t> x_grid,
 	const_array_ptr<size_t> y_grid,
@@ -25,6 +25,11 @@ image_t make_preview(
 	size_t dst_width,
 	size_t dst_height)
 {
+	if (!exists(main_path))
+	{
+		return image_t();
+	}
+
 	auto full_width = x_grid.back();
 	auto full_height = y_grid.back();
 	auto full_x = x_grid.size() - 1;
@@ -49,8 +54,8 @@ image_t make_preview(
 
 		for (int x = 0; x < full_x; x++)
 		{
-			auto base_path = path + "_" + to_string(x) + "_" + to_string(y);
-			auto file_path = base_path + "/" + string(file);
+			auto base_path = main_path / ("_" + to_string(x) + "_" + to_string(y));
+			auto file_path = base_path / string(file);
 			size_t x_left = x_grid[x];
 			size_t x_right = x_grid[x + 1];
 			size_t ow = x_right - x_left;
@@ -65,11 +70,11 @@ image_t make_preview(
 
 			try
 			{
-				if (!filesystem::exists(file_path))
+				if (!exists(file_path))
 				{
 					throw bear_exception(exception_type::other_error, "");
 				}
-				TIFF *tiff = TIFFOpen(file_path.c_str(), "r");
+				TIFF *tiff = TIFFOpen(file_path.string().c_str(), "r");
 				if (tiff == NULL)
 				{
 					throw bear_exception(exception_type::other_error, "unknown file io failed!");
@@ -179,42 +184,31 @@ image_t make_preview(
 			}
 			catch (bear_exception e)
 			{
-				if (!e.what().empty())
+				vector<size_t> sub_x_grid;
+				for (int i = 0; i < sub_divide + 1; ++i)
 				{
-					cout << e.what();
+					sub_x_grid.push_back(i * ow / sub_divide);
 				}
 
-				filesystem::
-
-				_finddata_t d;
-				if (-1 != _findfirst((base_path + "_*").c_str(), &d))
+				vector<size_t> sub_y_grid;
+				for (int i = 0; i < sub_divide + 1; ++i)
 				{
-					vector<size_t> sub_x_grid;
-					for (int i = 0; i < sub_divide + 1; ++i)
-					{
-						sub_x_grid.push_back(i * ow / sub_divide);
-					}
+					sub_y_grid.push_back(i * oh / sub_divide);
+				}
 
-					vector<size_t> sub_y_grid;
-					for (int i = 0; i < sub_divide + 1; ++i)
-					{
-						sub_y_grid.push_back(i * oh / sub_divide);
-					}
+				images[y][x] = make_preview(
+					base_path,
+					file,
+					sub_x_grid,
+					sub_y_grid,
+					redundance,
+					sub_divide,
+					ow,
+					oh);
 
-					images[y][x] = make_preview(
-						base_path,
-						file,
-						sub_x_grid,
-						sub_y_grid,
-						redundance,
-						sub_divide,
-						ow,
-						oh);
-
-					if (!images[y][x].empty())
-					{
-						found = true;
-					}
+				if (!images[y][x].empty())
+				{
+					found = true;
 				}
 			}
 		}
@@ -383,7 +377,7 @@ int main(int argc, char *argv[])
 		}
 
 		auto dst = make_preview(
-			string(path) + "/",
+			string(path),
 			file,
 			x_grid,
 			y_grid,
