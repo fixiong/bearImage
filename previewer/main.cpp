@@ -184,7 +184,7 @@ image_t make_preview(
 			}
 			catch (bear_exception e)
 			{
-				if (e.what() != "")
+				if (!e.what().empty())
 				{
 					cout << "error:" << e.what() << endl;
 				}
@@ -341,15 +341,15 @@ int main(int argc, char *argv[])
 		const_string_ptr _sub_divide = argv[7];
 		const_string_ptr _max_size = argv[8];
 
-		auto path = _path;
-		auto result_path = _result_path;
-		auto file = _file;
-		auto x_grid = map_function(
+		const_string_ptr path = _path;
+		const_string_ptr result_path = _result_path;
+		const_string_ptr file = _file;
+		vector<size_t> x_grid = map_function(
 			[](auto s) {
 				return string_cast<size_t>(s);
 			},
 			split(_x_grid, '_'));
-		auto y_grid = map_function(
+		vector<size_t> y_grid = map_function(
 			[](auto s) {
 				return string_cast<size_t>(s);
 			},
