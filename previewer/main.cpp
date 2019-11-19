@@ -184,6 +184,10 @@ image_t make_preview(
 			}
 			catch (bear_exception e)
 			{
+				if (e.what() != "")
+				{
+					cout << "error:" << e.what() << endl;
+				}
 				vector<size_t> sub_x_grid;
 				for (int i = 0; i < sub_divide + 1; ++i)
 				{
