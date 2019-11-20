@@ -22,7 +22,7 @@ image_t make_preview(
 	const_array_ptr<size_t> y_grid,
 	size_t redundance,
 	size_t sub_divide,
-	size_t dst_width,
+	size_t dst_width,  
 	size_t dst_height)
 {
 	if (!exists(main_path))

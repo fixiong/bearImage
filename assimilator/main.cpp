@@ -112,7 +112,7 @@ dynamic_image assimulate(
 				vector<size_t> sub_y_grid;
 				for (int i = 0; i < sub_divide + 1; ++i)
 				{
-					sub_y_grid.push_back(i * rw / sub_divide);
+					sub_y_grid.push_back(i * rh / sub_divide);
 				}
 
 				img = assimulate(
@@ -354,6 +354,10 @@ int main(int argc, char *argv[])
 		save_path += file;
 		//cout << save_path;
 		TIFF *out = TIFFOpen(save_path.c_str(), "w");
+		if (out == NULL)
+		{
+			throw bear_exception(exception_type::other_error, "creat result failed!");
+		}
 		defer df([=]() {
 			TIFFClose(out);
 		});
