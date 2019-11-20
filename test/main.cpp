@@ -25,24 +25,24 @@ int main(){
 
 		printf("Main Entry\n");
 
-		int tileX = 5, tileY = 5;
+		int tileX = 4, tileY = 5;
 		int rd = 2;
 
 
-		//vector<Mat> border(tileY);
+		vector<Mat> border(tileY);
 
-		//for (int y = 0; y < tileY; y++)
-		//{
-		//	string name = "C:\\work\\images\\9900000001015.zip\\_r_";
-		//	name += to_string(y);
-		//	name += "\\p\\result.tiff";
-		//	border[y] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
-		//}
+		for (int y = 0; y < tileY; y++)
+		{
+			string name = "C:\\work\\images\\_r_";
+			name += to_string(y);
+			name += "\\result.tiff";
+			border[y] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
+		}
 
-		//auto ab = map_function([](const Mat & m)
-		//{
-		//	return const_dynamic_image_ptr(m);
-		//}, border);
+		auto ab = map_function([](const Mat & m)
+		{
+			return const_dynamic_image_ptr(m);
+		}, border);
 
 		vector<vector<Mat>> src(tileY, vector<Mat>(tileX));
 
@@ -50,11 +50,11 @@ int main(){
 		{
 			for (int y = 0; y < tileY; y++)
 			{
-				string name = "C:\\work\\images\\9900000001015.zip\\_";
+				string name = "C:\\work\\images\\_";
 				name += to_string(x);
 				name += '_';
 				name += to_string(y);
-				name += "\\VRayWireColor.tiff";
+				name += "\\result.tiff";
 				try {
 					src[y][x] = imread(name.c_str(), IMREAD_ANYDEPTH | IMREAD_COLOR);
 				}
@@ -80,11 +80,10 @@ int main(){
 		param.iteration_time = 100;
 
 
-		//Mat border_mat(Size(2, th), CV_8UC3, Scalar(0));
-		//param.panorama_border = border_mat;
-		//make_panorama_border(border_mat, ab);
-		//param.constrain = PossionPanoramaBorderConstrain;
-		param.constrain = PossionNoConstrain;
+		Mat border_mat(Size(2, th), CV_8UC3, Scalar(0));
+		param.panorama_border = border_mat;
+		make_panorama_border(border_mat, ab);
+		param.constrain = PossionPanoramaBorderConstrain;
 		vector<size_t> x_grid(tileX + 1);
 		vector<size_t> y_grid(tileY + 1);
 		calculate_grid(src, x_grid, y_grid, rd);

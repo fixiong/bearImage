@@ -332,7 +332,20 @@ static void _poisson_stiching_m(
 				continue;
 			}
 
-			for (int y = int(rd); y < height(xf) - rd; ++y, ++ky)
+			auto ofs = rd;
+			auto lmt = rd;
+
+			if (by == 0)
+			{
+				ofs = 0;
+			}
+
+			if (by == height(src) - 1)
+			{
+				lmt = 0;
+			}
+
+			for (auto y = ofs; y < height(xf) - lmt; ++y, ++ky)
 			{
 				copy(srcXBorder[ky][0], xf[y][0]);
 				copy(srcXBorder[ky][1], xl[y][width(xl) - 1]);
