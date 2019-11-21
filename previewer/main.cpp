@@ -3,9 +3,11 @@
 #include <tiffio.h>
 #include <jpeglib.h>
 #include <string>
+#include <cmath>
 #include <bear/image.h>
 #include <bear/dynamic_image.h>
 #include <bear/functor.h>
+#include <bear/ptr_numeric.h>
 #include <boost/filesystem.hpp>
 
 using namespace std;
@@ -14,6 +16,59 @@ using namespace boost::filesystem;
 
 
 using image_t = image<unsigned char, 3>;
+
+template<typename T>
+inline auto clip_at(T && p, pos_t index)
+{
+	if ((size_t)index > p.size())
+	{
+		if (index < 0)
+		{
+			return forward<T>(p).at(0);
+		}
+		else
+		{
+			return forward<T>(p).at(p.size() - 1);
+		}
+	}
+	return forward<T>(p).at((size_t)index);
+}
+
+void down_semple_line(array_ptr<array<unsigned char, 3>> dst, array_ptr<array<unsigned char, 3>> src, float first_pos, float fac)
+{
+	float step = 1.0f / fac;
+	float start = first_pos - step / 2.0f;
+
+	auto istart = pos_t(start * 256.0f);
+	auto current = (istart >> 3);
+	auto acc = element_cast<size_t>(src[ci(src, current)]);
+	++current;
+	acc *= size_t((current << 3) - istart);
+
+	for (size_t x = 0; x < dst.size(); ++x)
+	{
+		auto end = start + step;
+		auto iend = pos_t(start * 256.0f);
+		auto next = (iend >> 3) + 1;
+
+		while (current < next)
+		{
+			++current;
+			acc += element_cast<size_t>(src[ci(src, current)]) << 3;
+		}
+
+		auto next_acc = to_size_t(src[ci(src, next - 1)]);
+		next_acc *= size_t((next << 3) - iend);
+
+
+
+		start = end;
+	}
+}
+
+image_t down_semple(const_image_ptr<unsigned char, 3> src, size_t ft, size_t fb)
+{
+}
 
 image_t make_preview(
 	path main_path,
