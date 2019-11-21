@@ -327,10 +327,6 @@ static void _poisson_stiching_m(
 		{
 			auto xf = src[by][0];
 			auto xl = src[by][width(src) - 1];
-			if (xf.empty() || xl.empty())
-			{
-				continue;
-			}
 
 			auto ofs = rd;
 			auto lmt = rd;
@@ -343,6 +339,12 @@ static void _poisson_stiching_m(
 			if (by == height(src) - 1)
 			{
 				lmt = 0;
+			}
+
+			if (xf.empty() || xl.empty())
+			{
+				ky += height(xf) - lmt - ofs;
+				continue;
 			}
 
 			for (auto y = ofs; y < height(xf) - lmt; ++y, ++ky)
