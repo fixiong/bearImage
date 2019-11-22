@@ -23,6 +23,7 @@ assimilator/main.cpp
 
 SET(PREVIEWER_FILES 
 previewer/main.cpp
+previewer/down_semple.cpp
 )
 
 add_definitions(-std=c++14 -O3)

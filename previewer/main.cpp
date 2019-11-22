@@ -8,6 +8,7 @@
 #include <bear/dynamic_image.h>
 #include <bear/functor.h>
 #include <boost/filesystem.hpp>
+#include "down_semple.h"
 
 using namespace std;
 using namespace bear;
@@ -227,57 +228,69 @@ image_t make_preview(
 
 	image_t dst(dst_width, dst_height);
 
-	size_t current_y_grid = 0;
-	for (size_t y = 0; y < height(dst); ++y)
+	for (size_t y = 0; y < height(images); ++y)
 	{
-		size_t sy = y * full_height / height(dst);
-		while (y_grid[current_y_grid + 1] <= sy)
+		auto oyl = y_grid[y];
+		auto oyr = y_grid[y + 1];
+
+		auto yofs = 0;
+		auto ylmt = 0;
+		if (y != 0)
 		{
-			++current_y_grid;
+			yofs = 2;
 		}
-		sy -= y_grid[current_y_grid];
-		if (current_y_grid != 0)
+		if (y != height(images) - 1)
 		{
-			sy += redundance;
+			ylmt = 2;
 		}
 
-		auto drow = dst[y];
-		auto xrows = map_function([=](const image_t &imgs)
-		{
-			if (imgs.empty())
-			{
-				return decltype(imgs[sy])();
-			}
-			return imgs[sy];
-		}, images[current_y_grid]);
+		auto ryl = oyl - yofs;
+		auto ryr = oyr + ylmt;
 
-		size_t current_x_grid = 0;
-		for (size_t x = 0; x < width(dst); ++x)
+		auto dyl = oyl * dst_height / y_grid.back();
+		auto dyr = oyr * dst_height / y_grid.back();
+
+
+		for (size_t x = 0; x < width(images); ++x)
 		{
-			size_t sx = x * full_width / width(dst);
-			while (x_grid[current_x_grid + 1] <= sx)
+			auto oxl = x_grid[x];
+			auto oxr = x_grid[x + 1];
+
+			auto xofs = 0;
+			auto xlmt = 0;
+			if (x != 0)
 			{
-				++current_x_grid;
+				xofs = 2;
 			}
-			if (xrows[current_x_grid].empty())
+			if (x != width(images) - 1)
 			{
+				xlmt = 2;
+			}
+
+			auto rxl = oxl - xofs;
+			auto rxr = oxr + xlmt;
+
+			auto dxl = oxl * dst_width / x_grid.back();
+			auto dxr = oxr * dst_width / x_grid.back();
+
+			auto di = clip_image(dst, image_rectangle(dxl, dyl, dxr - dxl, dyr - dyl));
+
+			if (dst_width == x_grid.back() && dst_height == y_grid.back())
+			{
+				auto si = clip_image(images[y][x], image_rectangle(xofs, yofs, dxr - dxl, dyr - dyl));
+				copy(di, si);
 				continue;
 			}
-			sx -= x_grid[current_x_grid];
-			if (current_x_grid != 0)
-			{
-				sx += redundance;
-			}
 
-			auto &dp = drow[x];
-			auto &ds = xrows[current_x_grid][sx];
+			float x_fac = (float)dst_width / x_grid.back();
+			float y_fac = (float)dst_width / y_grid.back();
 
-			dp[0] = ds[0];
-			dp[1] = ds[1];
-			dp[2] = ds[2];
+			float x_ofs = (dxl + 0.5f) / x_fac - rxl;
+			float y_ofs = (dyl + 0.5f) / y_fac - ryl;
+
+			down_semple(di, images[y][x], x_ofs, y_ofs, x_fac, y_fac);
 		}
 	}
-
 
 	return dst;
 }

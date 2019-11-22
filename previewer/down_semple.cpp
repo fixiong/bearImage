@@ -1,6 +1,5 @@
 #include "down_semple.h"
 #include <cmath>
-#include <bear/image.h>
 #include <bear/ptr_numeric.h>
 
 using namespace std;
