@@ -1,0 +1,134 @@
+#include "down_semple.h"
+#include <cmath>
+#include <bear/image.h>
+#include <bear/ptr_numeric.h>
+
+using namespace std;
+using namespace bear;
+
+
+using image_t = image<unsigned char, 3>;
+
+template<typename T>
+inline auto clip_at(T && p, pos_t index)
+{
+	if ((size_t)index > p.size())
+	{
+		if (index < 0)
+		{
+			return forward<T>(p).at(0);
+		}
+		else
+		{
+			return forward<T>(p).at(p.size() - 1);
+		}
+	}
+	return forward<T>(p).at((size_t)index);
+}
+
+template<typename D1, typename D2, typename Fun>
+void down_semple_line(D1 && dst1, D2 && dst2, const_array_ptr<array<unsigned char, 3>> src, float first_pos, float fac, Fun && fun)
+{
+	float step = 1.0f / fac;
+	float start = first_pos - step / 2.0f;
+
+	array<size_t, 3> dp;
+
+	pos_t istart = pos_t(start * 256.0f);
+	pos_t current = istart >> 8;
+	size_t weight = size_t(((current + 1) << 8) - istart);
+	map_function([=](size_t &d, unsigned char s) {
+		d = s * weight;
+	}, dp, clip_at(src, current));
+	++current;
+
+	for (size_t x = 0; x < dst1.size(); ++x)
+	{
+		start += step;
+		istart = pos_t(start * 256.0f);
+		pos_t next = (istart >> 8) + 1;
+
+
+		while (current < next - 1)
+		{
+			map_function([](size_t &d, unsigned char s) {
+				d += s << 8;
+			}, dp, clip_at(src, current));
+			++current;
+		}
+
+		array<size_t, 3> ndp;
+
+		size_t weight = size_t(((current + 1) << 8) - istart);
+		map_function([=](size_t &d, size_t &n, unsigned char s) {
+			d += s << 8;
+			n = s * weight;
+			d -= n;
+		}, dp, ndp, clip_at(src, current));
+		++current;
+
+		forward<Fun>(fun)(forward<D1>(dst1)[x][0], forward<D2>(dst2)[x][0], dp[0]);
+		forward<Fun>(fun)(forward<D1>(dst1)[x][1], forward<D2>(dst2)[x][1], dp[1]);
+		forward<Fun>(fun)(forward<D1>(dst1)[x][2], forward<D2>(dst2)[x][2], dp[2]);
+
+		dp = ndp;
+	}
+}
+
+struct dummy {
+	dummy & operator[](size_t) {
+		return *this;
+	}
+};
+
+void down_semple(image_ptr<unsigned char, 3> dst, const_image_ptr<unsigned char, 3> src, float x_first_Pos, float x_fac, float y_first_Pos, float y_fac)
+{
+	float fac = x_fac * y_fac / 256.0f;
+	float step = 1.0f / y_fac;
+	float start = y_first_Pos - step / 2.0f;
+
+	tensor<array<size_t, 3>, 2> tmp(2, width(src));
+
+	auto dp = tmp[0];
+	auto ndp = tmp[1];
+
+
+	pos_t istart = pos_t(start * 256.0f);
+	pos_t current = istart >> 8;
+	size_t weight = size_t(((current + 1) << 8) - istart);
+	down_semple_line(dp, dummy(), clip_at(src, current), x_first_Pos, x_fac, [=](size_t &d, auto, size_t s) {
+		d = s * weight;
+	});
+	++current;
+
+	for (size_t y = 0; y < dst.size() - 1; ++y)
+	{
+		start += step;
+		istart = pos_t(start * 256.0f);
+		pos_t next = (istart >> 8) + 1;
+
+
+		while (current < next - 1)
+		{
+			down_semple_line(dp, dummy(), clip_at(src, current), x_first_Pos, x_fac, [](size_t &d, auto, size_t s) {
+				d += s << 8;
+			});
+			++current;
+		}
+
+		size_t weight = size_t(((current + 1) << 8) - istart);
+		down_semple_line(dp, ndp, clip_at(src, current), x_first_Pos, x_fac,[=](size_t &d, size_t &n, size_t s) {
+			d += s << 8;
+			n = s * weight;
+			d -= n;
+		});
+		++current;
+
+		map_function([=](unsigned char &d, size_t s) {
+			d = (unsigned char)(s * fac + 0.5f);
+		}, dst[y], dp);
+
+		swap(dp, ndp);
+	}
+
+}

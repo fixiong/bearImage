@@ -321,7 +321,7 @@ static void _poisson_stiching_m(
 
 	tensor<typename Dst::elm_type, 3> srcXBorder(height(dst), 2, channel_size(dst));
 	{
-		int ky = 0;
+		size_t ky = 0;
 
 		for (int by = 0; by < height(src); ++by)
 		{
