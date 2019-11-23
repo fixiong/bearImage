@@ -283,12 +283,12 @@ image_t make_preview(
 			}
 
 			float x_fac = (float)dst_width / x_grid.back();
-			float y_fac = (float)dst_width / y_grid.back();
+			float y_fac = (float)dst_height / y_grid.back();
 
 			float x_ofs = (dxl + 0.5f) / x_fac - rxl;
 			float y_ofs = (dyl + 0.5f) / y_fac - ryl;
 
-			down_semple(di, images[y][x], x_ofs, y_ofs, x_fac, y_fac);
+			down_semple(di, images[y][x], x_ofs, x_fac, y_ofs, y_fac);
 		}
 	}
 
@@ -321,7 +321,7 @@ void save_jpeg(const string &path, image_ptr<unsigned char, 3> img)
 	cinfo.in_color_space = JCS_RGB;//设置输入格式
 
 	jpeg_set_defaults(&cinfo);
-	jpeg_set_quality(&cinfo, 70, 1);  // todo 1 == true
+	jpeg_set_quality(&cinfo, 80, 1);  // todo 1 == true
 	jpeg_start_compress(&cinfo, TRUE);
 	row_stride = int(width(img)) * cinfo.input_components;
 
