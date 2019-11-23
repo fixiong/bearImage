@@ -1,6 +1,7 @@
 #include "down_semple.h"
 #include <cmath>
 #include <bear/ptr_numeric.h>
+#include <iostream>
 
 using namespace std;
 using namespace bear;

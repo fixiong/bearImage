@@ -114,7 +114,11 @@ image_t make_preview(
 						" ",
 						to_string(w),
 						" ",
-						to_string(h));
+						to_string(h),
+						" ",
+						to_string(ow),
+						" ",
+						to_string(oh));
 				}
 
 				image_t oimg(w, h);
@@ -341,6 +345,18 @@ void save_jpeg(const string &path, image_ptr<unsigned char, 3> img)
 	jpeg_destroy_compress(&cinfo);
 }
 
+vector<size_t> to_grid(const_string_ptr s)
+{
+	vector<size_t> ret;
+	auto pr = s.split('_');
+	for (; !pr.second.empty(); pr = pr.second.split('_'))
+	{
+		ret.push_back(stoi(pr.first));
+	}
+	ret.push_back(stoi(pr.first));
+	return ret;
+}
+
 int main(int argc, char *argv[])
 {
 	try
@@ -362,16 +378,8 @@ int main(int argc, char *argv[])
 		const_string_ptr path = _path;
 		const_string_ptr result_path = _result_path;
 		const_string_ptr file = _file;
-		vector<size_t> x_grid = map_function(
-			[](auto s) {
-				return string_cast<size_t>(s);
-			},
-			split(_x_grid, '_'));
-		vector<size_t> y_grid = map_function(
-			[](auto s) {
-				return string_cast<size_t>(s);
-			},
-			split(_y_grid, '_'));
+		vector<size_t> x_grid = to_grid(_x_grid);
+		vector<size_t> y_grid = to_grid(_y_grid);
 		auto redundance = stoi(_redundance);
 		auto sub_divide = stoi(_sub_divide);
 		auto max_size = stoi(_max_size);
