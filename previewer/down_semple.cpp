@@ -132,9 +132,14 @@ void down_semple(image_ptr<unsigned char, 3> dst, const_image_ptr<unsigned char,
 		});
 		++current;
 
-		map_function([=](unsigned char &d, size_t s) {
-			d = (unsigned char)(s * fac + 0.5f);
-		}, dst[y], dp);
+		auto dy = dst[y];
+
+		for (size_t x = 0; x < dp.size(); ++x)
+		{
+			dy[x][0] = (unsigned char)(dp[x][0] * fac + 0.5f);
+			dy[x][1] = (unsigned char)(dp[x][1] * fac + 0.5f);
+			dy[x][2] = (unsigned char)(dp[x][2] * fac + 0.5f);
+		}
 
 		swap(dp, ndp);
 	}
