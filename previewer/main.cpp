@@ -253,6 +253,10 @@ image_t make_preview(
 
 		for (size_t x = 0; x < width(images); ++x)
 		{
+			if (images[y][x].empty())
+			{
+				continue;
+			}
 			auto oxl = x_grid[x];
 			auto oxr = x_grid[x + 1];
 
