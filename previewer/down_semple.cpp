@@ -42,21 +42,23 @@ inline vector<array<size_t, 3>> create_tmp(const image_ptr<unsigned char, 3> &ds
 }
 
 template<typename D, typename S, typename Fun, typename ... F>
-void down_semple_line(D && dst, S &&src, Fun && fun, float left, float fac , F ... other_fac)
+void down_semple_line(D && dst, S &&src, Fun && fun, float _left, float _fac , F ... other_fac)
 {
-	float step = 1.0f / fac;
+	pos_t ileft = (pos_t)(_left * 256.0f + 0.5f);
+	pos_t ifac = (pos_t)(65536.0f / _fac + 0.5f);
+	pos_t istep = (ifac + 128) >> 8;
 
 	auto dp = create_tmp(dst);
 
 	for (size_t i = 0; i < dst.size(); ++i)
 	{
-		pos_t istart = pos_t((left + i * step) * 256.0f);
+		pos_t istart = ileft + ((i * ifac + 128) >> 8);
 		pos_t index = istart >> 8;
-		size_t start_weight = size_t(((index + 1) << 8) - istart);
+		size_t start_weight = 256 - (istart & 255);
 
-		pos_t iend = pos_t((left + (i + 1) * step) * 256.0f);
+		pos_t iend = istart + istep;
 		pos_t max_index = iend >> 8;
-		size_t end_weight = size_t(((max_index + 1) << 8) - iend);
+		size_t end_weight = 256 - (iend & 255);
 
 		down_semple_line(dp, clip_at(src, index), [=](auto &d, auto s) {
 			d = s * start_weight;
@@ -87,9 +89,17 @@ void down_semple(
 	float y_left,
 	float y_fac)
 {
-	float fac = x_fac * y_fac / 256.0f / 256.0f;
+	float fac = (x_fac * y_fac * 65536);
+	size_t sft = 0;
+
+	while (fac < 32768.0f)
+	{
+		fac *= 2.0f;
+		sft += 1;
+	}
+	unsigned long long ifac = (unsigned long long)(fac + 0.5f);
 
 	down_semple_line(dst, src,[=](auto &dst, auto src) {
-		dst = (unsigned char)(src * fac + 0.5f);
+		dst = (unsigned char)((unsigned long long)(src * ifac) >> (32 + sft));
 	}, y_left, y_fac, x_left, x_fac);
 }
