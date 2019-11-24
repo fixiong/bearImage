@@ -293,10 +293,10 @@ image_t make_preview(
 			float x_fac = (float)dst_width / x_grid.back();
 			float y_fac = (float)dst_height / y_grid.back();
 
-			float x_ofs = (dxl + 0.5f) / x_fac - rxl;
-			float y_ofs = (dyl + 0.5f) / y_fac - ryl;
+			float x_left = dxl / x_fac - rxl;
+			float y_left = dyl / y_fac - ryl;
 
-			down_semple(di, images[y][x], x_ofs, x_fac, y_ofs, y_fac);
+			down_semple(di, images[y][x], x_left, x_fac, y_left, y_fac);
 		}
 	}
 
