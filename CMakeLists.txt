@@ -30,9 +30,9 @@ add_definitions(-std=c++14 -O3)
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
-add_executable( assimilator ${ASSIMILATOR_FILES} )
-target_link_libraries( assimilator ${TIFF_LIBRARY} ${Boost_LIBRARIES} ${PROJECT_NAME} )
+add_executable( assimilator ${ASSIMILATOR_FILES}  ${SRC_FILES})
+target_link_libraries( assimilator ${TIFF_LIBRARY} ${Boost_LIBRARIES} )
 
 add_executable( previewer ${PREVIEWER_FILES} )
-target_link_libraries( previewer ${TIFF_LIBRARY} ${JPEG_LIBRARY} ${Boost_LIBRARIES} ${PROJECT_NAME} )
+target_link_libraries( previewer ${TIFF_LIBRARY} ${JPEG_LIBRARY} ${Boost_LIBRARIES} )
 
