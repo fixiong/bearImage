@@ -160,7 +160,7 @@ image_t make_preview(
 					{
 						auto p_img = tensor_ptr<unsigned char, 3>(pimg);
 
-						zip_to<2>([](auto d, auto s)
+						zip_to<2>([](auto &d, auto s)
 						{
 							d[0] = s[0];
 							d[1] = s[1];
@@ -172,7 +172,7 @@ image_t make_preview(
 					{
 						auto p_img = tensor_ptr<unsigned short, 3>(pimg);
 
-						zip_to<2>([](auto d, auto s)
+						zip_to<2>([](auto &d, auto s)
 						{
 							d[0] = s[0] >> 8;
 							d[1] = s[1] >> 8;
