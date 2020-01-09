@@ -8,34 +8,6 @@ using namespace bear;
 using namespace std;
 
 
-static void x_d(const image_ptr<unsigned short,1> &img)
-{
-	for (size_t y = 0; y < img.height(); ++y)
-	{
-		auto row = img[y];
-		for (size_t x = img.width() - 1; x > 0; --x)
-		{
-			row[x] = row[x] - row[x - 1] + 32768;
-		}
-
-		row[0] = 32768;
-	}
-}
-
-
-static void y_d(const image_ptr<unsigned short, 1> &img)
-{
-	for (size_t y = img.height() - 1; y >= 0; --y)
-	{
-		auto row_1 = img[y - 1];
-		auto row = img[y];
-		for (size_t x = 0; x < img.width(); ++x)
-		{
-			row[x] = row[x] - row_1[x] + 32768;
-		}
-	}
-}
-
 
 template<typename T>
 struct _ZERO_PS 
@@ -145,7 +117,7 @@ template<typename Dst, typename Src, typename ZP>
 static void x_d(
 	Dst dx,
 	Src src,
-	unsigned int ch,
+	size_t ch,
 	const_image_ptr<unsigned char,1> mask,
 	ZP && zp)
 {
@@ -174,7 +146,7 @@ template<typename Dst, typename Src, typename ZP>
 static void y_d(
 	Dst dy,
 	Src src,
-	unsigned int ch,
+	size_t ch,
 	const_image_ptr<unsigned char, 1> mask,
 	ZP && zp)
 {

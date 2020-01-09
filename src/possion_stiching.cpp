@@ -76,7 +76,7 @@ void mask_merg(
 }
 
 template <typename Image, typename Ds>
-static void stiching(Image dst, Ds ds, unsigned int ch)
+static void stiching(Image dst, Ds ds, size_t ch)
 {
 	using Unit = typename Ds::elm_type;
 
@@ -138,7 +138,7 @@ static void _poisson_stiching_merged(
 	image<Unit, 1> dy(width(dst), height(dst));
 	image<Unit, 1> ds(width(dst), height(dst));
 
-	for (int i = 0; i < dst[0][0].size(); ++i)
+	for (size_t i = 0; i < dst[0][0].size(); ++i)
 	{
 		x_d(to_ptr(dx), src, i, mask, _ZERO_PS<Unit>());
 		y_d(to_ptr(dy), src, i, mask, _ZERO_PS<Unit>());
@@ -323,7 +323,7 @@ static void _poisson_stiching_m(
 	{
 		size_t ky = 0;
 
-		for (int by = 0; by < height(src); ++by)
+		for (size_t by = 0; by < height(src); ++by)
 		{
 			auto xf = src[by][0];
 			auto xl = src[by][width(src) - 1];
@@ -355,7 +355,7 @@ static void _poisson_stiching_m(
 		}
 	}
 
-	for (int i = 0; i < channel_size(dst); ++i)
+	for (size_t i = 0; i < channel_size(dst); ++i)
 	{
 		to_ptr(dx).fill(_ZERO_PS<Unit>::run());
 		for_each_img(src, rd, x_grid, y_grid, [&src, &dx, i, &param, rd](size_t x, size_t y, image_size bs, image_point p, image_point cp) {
@@ -494,7 +494,7 @@ static void _poisson_stiching_m(
 					}
 
 					using CT = decltype(_ZERO_PS<Unit>::acc(bx[0][0], Unit(0)));
-					CT hd, ld;
+					CT hd = 0, ld = 0;
 					CT bs = CT(w - 1);
 					CT tp = bs / 2;
 

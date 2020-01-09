@@ -26,6 +26,10 @@ previewer/main.cpp
 previewer/down_semple.cpp
 )
 
+SET(VALIDATOR_FILES 
+validator/main.cpp
+)
+
 add_definitions(-std=c++14 -O3)
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
@@ -35,4 +39,7 @@ target_link_libraries( assimilator ${TIFF_LIBRARY} ${Boost_LIBRARIES} )
 
 add_executable( previewer ${PREVIEWER_FILES} )
 target_link_libraries( previewer ${TIFF_LIBRARY} ${JPEG_LIBRARY} ${Boost_LIBRARIES} )
+
+add_executable( validator ${(VALIDATOR_FILES} )
+target_link_libraries( validator ${TIFF_LIBRARY} )
 
