@@ -40,6 +40,6 @@ target_link_libraries( assimilator ${TIFF_LIBRARY} ${Boost_LIBRARIES} )
 add_executable( previewer ${PREVIEWER_FILES} )
 target_link_libraries( previewer ${TIFF_LIBRARY} ${JPEG_LIBRARY} ${Boost_LIBRARIES} )
 
-add_executable( validator ${(VALIDATOR_FILES} )
+add_executable( validator ${VALIDATOR_FILES} )
 target_link_libraries( validator ${TIFF_LIBRARY} )
 
