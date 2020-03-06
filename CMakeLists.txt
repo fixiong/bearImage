@@ -4,7 +4,6 @@ PROJECT(bearimage)
 message("${BEAR_DIR}")
 find_package(TIFF)
 find_package(JPEG)
-find_package(Boost COMPONENTS filesystem)
 
 INCLUDE_DIRECTORIES(                          
      include
@@ -30,15 +29,17 @@ SET(VALIDATOR_FILES
 validator/main.cpp
 )
 
-add_definitions(-std=c++14 -O3)
+add_definitions(-std=c++17 -O3)
+
+link_libraries(stdc++fs)
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
 add_executable( assimilator ${ASSIMILATOR_FILES}  ${SRC_FILES})
-target_link_libraries( assimilator ${TIFF_LIBRARY} ${Boost_LIBRARIES} )
+target_link_libraries( assimilator ${TIFF_LIBRARY} )
 
 add_executable( previewer ${PREVIEWER_FILES} )
-target_link_libraries( previewer ${TIFF_LIBRARY} ${JPEG_LIBRARY} ${Boost_LIBRARIES} )
+target_link_libraries( previewer ${TIFF_LIBRARY} ${JPEG_LIBRARY} )
 
 add_executable( validator ${VALIDATOR_FILES} )
 target_link_libraries( validator ${TIFF_LIBRARY} )

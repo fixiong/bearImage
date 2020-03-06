@@ -4,7 +4,7 @@
 #include <string>
 #include <bear/ptr_algorism.h>
 #include <bear/functor.h>
-#include <boost/filesystem.hpp>
+#include <experimental/filesystem>
 
 #include "../include/possion_stiching.h"
 
@@ -22,7 +22,7 @@ struct GlobalFormat {
 
 using namespace std;
 using namespace bear;
-using namespace boost::filesystem;
+using namespace std::experimental::filesystem::v1;
 
 dynamic_image assimulate(
 	path main_path,

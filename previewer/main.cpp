@@ -7,12 +7,12 @@
 #include <bear/image.h>
 #include <bear/dynamic_image.h>
 #include <bear/functor.h>
-#include <boost/filesystem.hpp>
+#include <experimental/filesystem>
 #include "down_semple.h"
 
 using namespace std;
 using namespace bear;
-using namespace boost::filesystem;
+using namespace std::experimental::filesystem::v1;
 
 
 using image_t = image<unsigned char, 3>;
