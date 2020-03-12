@@ -45,7 +45,18 @@ int main(int argc, char *argv[])
 			TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &h);
 
 			if (w != width || h != height) {
-				throw bear_exception(exception_type::other_error, "wrong size:", full_path);
+				throw bear_exception(
+					exception_type::other_error,
+					"wrong size:",
+					full_path,
+					" expect:",
+					to_string(width),
+					" ",
+					to_string(height),
+					" has:",
+					to_string(w),
+					" ",
+					to_string(h));
 			}
 
 		});
