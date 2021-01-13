@@ -19,7 +19,7 @@ using namespace std;
 template <typename Image>
 image<unsigned char, 1> mask_to_byte_inner(Image src)
 {
-	image<unsigned char, 1> ret;
+	image<unsigned char, 1> ret(width(src),height(src));
 	zip_to<2>([](unsigned char &r, const_array_ptr<typename Image::elm_type> s) {
 		r = s[0] != 0 ? 255 : 0;
 	},
@@ -123,10 +123,11 @@ static void estimate_border(Array &db, bool ring)
 				 db, acc);
 }
 
-template <typename Unit, typename Image, typename ConstImage>
+template <typename Unit, typename Input>
 static void _poisson_stiching_merged(
-	Image dst,
-	ConstImage src,
+	tensor_ptr<Input, 3> dst,
+	const_tensor_ptr<Input, 3> src,
+	const_tensor_ptr<Input, 3> ref,
 	const_image_ptr<unsigned char, 1> mask,
 	PStichingParam param)
 {
@@ -138,20 +139,49 @@ static void _poisson_stiching_merged(
 	image<Unit, 1> dy(width(dst), height(dst));
 	image<Unit, 1> ds(width(dst), height(dst));
 
-	for (size_t i = 0; i < dst[0][0].size(); ++i)
+	if (param.constrain == PossionMaskConstrain)
 	{
-		x_d(to_ptr(dx), src, i, mask, _ZERO_PS<Unit>());
-		y_d(to_ptr(dy), src, i, mask, _ZERO_PS<Unit>());
+		auto constrain = bear::map_function([](auto m) -> Unit
+			{
+				if (m == 0)
+				{
+					return 0;
+				}
+				else
+				{
+					return _ZERO_PS<Unit>::one();
+				}
+			}, mask.to_tensor());
 
-		dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
 
-		stiching(dst, ds, i);
+		for (size_t i = 0; i < dst[0][0].size(); ++i)
+		{
+			x_d(to_ptr(dx), src, ref, i, mask, _ZERO_PS<Unit>());
+			y_d(to_ptr(dy), src, ref, i, mask, _ZERO_PS<Unit>());
+
+			dxy_poisson_solver(ds, dx, dy, constrain, param.iteration_time, param.base_level);
+
+			stiching(dst, ds, i);
+		}
+	}
+	else
+	{
+		for (size_t i = 0; i < dst[0][0].size(); ++i)
+		{
+			x_d(to_ptr(dx), src, ref, i, mask, _ZERO_PS<Unit>());
+			y_d(to_ptr(dy), src, ref, i, mask, _ZERO_PS<Unit>());
+
+			dxy_poisson_solver(ds, dx, dy, param.iteration_time, param.base_level);
+
+			stiching(dst, ds, i);
+		}
 	}
 }
 
 void poisson_stiching_merged(
 	dynamic_image_ptr dst,
 	const_dynamic_image_ptr src,
+	const_dynamic_image_ptr ref,
 	const_dynamic_image_ptr _mask,
 	PStichingParam param)
 {
@@ -164,7 +194,7 @@ void poisson_stiching_merged(
 
 	auto maskbuf = mask_to_byte(_mask);
 	const_image_ptr<unsigned char, 1> mask;
-	if (maskbuf.size())
+	if (!maskbuf.empty())
 	{
 		mask = maskbuf;
 	}
@@ -173,20 +203,23 @@ void poisson_stiching_merged(
 		mask = const_image_ptr<unsigned char, 1>(_mask);
 	}
 
+
 	if (param.float_precision)
 	{
 		if (1 == dst.elm_size())
 		{
-			_poisson_stiching_merged<float>(
+			_poisson_stiching_merged<float, unsigned char>(
 				tensor_ptr<unsigned char, 3>(dst),
 				const_tensor_ptr<unsigned char, 3>(src),
+				const_tensor_ptr<unsigned char, 3>(ref),
 				mask, param);
 		}
 		else
 		{
-			_poisson_stiching_merged<float>(
+			_poisson_stiching_merged<float, unsigned short>(
 				tensor_ptr<unsigned short, 3>(dst),
 				const_tensor_ptr<unsigned short, 3>(src),
+				const_tensor_ptr<unsigned short, 3>(ref),
 				mask, param);
 		}
 	}
@@ -194,16 +227,18 @@ void poisson_stiching_merged(
 	{
 		if (1 == dst.elm_size())
 		{
-			_poisson_stiching_merged<unsigned short>(
+			_poisson_stiching_merged<unsigned short, unsigned char>(
 				tensor_ptr<unsigned char, 3>(dst),
 				const_tensor_ptr<unsigned char, 3>(src),
+				const_tensor_ptr<unsigned char, 3>(ref),
 				mask, param);
 		}
 		else
 		{
-			_poisson_stiching_merged<unsigned short>(
+			_poisson_stiching_merged<unsigned short, unsigned short>(
 				tensor_ptr<unsigned short, 3>(dst),
 				const_tensor_ptr<unsigned short, 3>(src),
+				const_tensor_ptr<unsigned short, 3>(ref),
 				mask, param);
 		}
 	}
@@ -226,6 +261,12 @@ void poisson_stiching(
 	{
 		mask = const_image_ptr<unsigned char, 1>(_mask);
 	}
+	dynamic_image tmp;
+	if (dst.data() == src1.data())
+	{
+		tmp = src1;
+		src1 = tmp;
+	}
 
 	if (dst.elm_size() == 1)
 	{
@@ -244,7 +285,8 @@ void poisson_stiching(
 			mask);
 	}
 
-	poisson_stiching_merged(dst, src1, mask, param);
+
+	poisson_stiching_merged(dst, dst , src1, mask, param);
 }
 
 template <typename Src, typename C>
@@ -500,8 +542,8 @@ static void _poisson_stiching_m(
 
 					for (int y = 0; y < h; ++y)
 					{
-						CT d1 = _ZERO_PS<Unit>::from_unit(srcXBorder[y][0][i], srcXBorder[y][1][i]);
-						CT d1x = _ZERO_PS<Unit>::from_unit(border[y][0][i], border[y][1][i]);
+						CT d1 = _ZERO_PS<Unit>::from_unit(srcXBorder[y][0][i], srcXBorder[y][1][i], 0, 0);
+						CT d1x = _ZERO_PS<Unit>::from_unit(border[y][0][i], border[y][1][i], 0, 0);
 						CT d2 = _ZERO_PS<Unit>::acc(bx[y][0], d1);
 						d2 = _ZERO_PS<Unit>::acc(d2, _ZERO_PS<Unit>::minus(d1x));
 						CT d3 = d2 - CT(bx[y][1]);

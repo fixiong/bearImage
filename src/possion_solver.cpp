@@ -9,6 +9,7 @@
 
 using namespace bear;
 
+std::function<void(bear::const_dynamic_image_ptr)> image_debug;
 
 struct DownKernel
 {
@@ -57,6 +58,7 @@ struct Iteration<unsigned short>
 		image_ptr<unsigned short, 1> dst,
 		image_ptr<unsigned short, 1> dx,
 		image_ptr<unsigned short, 1> dy,
+		image_ptr<unsigned short, 1> constrain,
 		int iteration_time,
 		bool free);
 };
@@ -65,6 +67,7 @@ void Iteration<unsigned short>::run(
 	image_ptr<unsigned short, 1> dst,
 	image_ptr<unsigned short, 1> dx,
 	image_ptr<unsigned short, 1> dy,
+	image_ptr<unsigned short, 1> constrain,
 	int iteration_time,
 	bool free)
 {
@@ -189,6 +192,17 @@ void Iteration<unsigned short>::run(
 				}
 			}
 		}
+
+		if (!constrain.empty())
+		{
+			zip_to<2>([](auto& d, auto c)
+				{
+					if (c != 0)
+					{
+						d = 32768;
+					}
+				}, dst, constrain);
+		}
 	}
 }
 
@@ -200,6 +214,7 @@ struct Iteration<float>
 		image_ptr<float, 1> dst,
 		image_ptr<float, 1> dx,
 		image_ptr<float, 1> dy,
+		image_ptr<float, 1> constrain,
 		int iteration_time,
 		bool free);
 };
@@ -208,6 +223,7 @@ void Iteration<float>::run(
 	image_ptr<float, 1> dst,
 	image_ptr<float, 1> dx,
 	image_ptr<float, 1> dy,
+	image_ptr<float, 1> constrain,
 	int iteration_time,
 	bool free)
 {
@@ -337,6 +353,18 @@ void Iteration<float>::run(
 				}
 			}
 		}
+
+
+		if (!constrain.empty())
+		{
+			zip_to<2>([](auto& d, auto c)
+				{
+					if (c < 0.00001f && c > -0.00001f )
+					{
+						d = 0;
+					}
+				}, dst, constrain);
+		}
 	}
 }
 
@@ -367,7 +395,7 @@ static void scale_recursion(
 
 	UpFilter<UpKernel>::run(dst,to_ptr(sub_dst));
 
-	Iteration<Unit>::run(dst, dx, dy, iteration_time, true);
+	Iteration<Unit>::run(dst, dx, dy, image_ptr<Unit, 1>(), iteration_time, true);
 }
 
 
@@ -412,7 +440,47 @@ static void scale_recursion(
 	copy(dst.clip(image_rectangle(0, 0, dst.width(), 1)), yborder.clip(0, 0, yborder.width(), 1));
 	copy(dst.clip(image_rectangle(0, dst.height() - 1, dst.width(), 1)), yborder.clip(0, 1, yborder.width(), 1));
 
-	Iteration<Unit>::run(dst, dx, dy, iteration_time, false);
+	Iteration<Unit>::run(dst, dx, dy, image_ptr<Unit, 1>(), iteration_time, false);
+}
+
+
+
+template<typename Unit>
+static void scale_recursion(
+	image_ptr<Unit, 1> dst,
+	image_ptr<Unit, 1> dx,
+	image_ptr<Unit, 1> dy,
+	image_ptr<Unit, 1> constrain,
+	int iteration_time, unsigned int n_layer)
+{
+
+	image_debug(constrain);
+
+	if (!n_layer)
+	{
+		dst.fill(_ZERO_UNIT<Unit>::run());
+		return;
+	}
+
+	auto subsz = size_down<5>(size(dst));
+
+	image<Unit, 1> sub_dx(subsz);
+	image<Unit, 1> sub_dy(subsz);
+	image<Unit, 1> sub_dst(subsz);
+	image<Unit, 1> sub_constrain(subsz);
+
+	DownFilter<DownKernel>::run_dx(to_ptr(sub_dx), dx);
+	DownFilter<DownKernel>::run_dy(to_ptr(sub_dy), dy);
+
+
+	DownFilter<DownKernel>::run(to_ptr(sub_constrain), constrain);
+
+
+	scale_recursion<Unit>(sub_dst, sub_dx, sub_dy, sub_constrain, iteration_time, n_layer - 1);
+
+	UpFilter<UpKernel>::run(dst, to_ptr(sub_dst));
+
+	Iteration<Unit>::run(dst, dx, dy, constrain, iteration_time, true);
 }
 
 template<typename Unit>
@@ -422,6 +490,7 @@ void dxy_poisson_solver_inner(
 	image_ptr<Unit, 1> dy,
 	image_ptr<Unit, 1> xborder,
 	image_ptr<Unit, 1> yborder,
+	image_ptr<Unit, 1> constrain,
 	unsigned int iteration_time,
 	int base_level)
 {
@@ -455,16 +524,20 @@ void dxy_poisson_solver_inner(
 
 	level = std::max(1, level);
 
-	if (0 == xborder.height() || 0 == yborder.height())
-	{
-		scale_recursion(dst, dx, dy, iteration_time, level);
-	}
-	else
+	if (!xborder.empty() && !yborder.empty())
 	{
 		scale_recursion(dst, dx, dy, xborder, yborder, iteration_time, level);
 	}
+	else if (!constrain.empty())
+	{
+		scale_recursion(dst, dx, dy, constrain, iteration_time, level);
+	}
+	else
+	{
+		scale_recursion(dst, dx, dy, iteration_time, level);
+	}
 
-	if (dbuf.size())copy(_dst, dst);
+	if (!dbuf.empty())copy(_dst, dst);
 }
 
 void dxy_poisson_solver(
@@ -491,6 +564,7 @@ void dxy_poisson_solver(
 			image_ptr<unsigned short, 1>(dy),
 			image_ptr<unsigned short, 1>(),
 			image_ptr<unsigned short, 1>(),
+			image_ptr<unsigned short, 1>(),
 			iteration_time, base_level);
 	}
 	else if (dst.elm_size() == 4)
@@ -499,6 +573,7 @@ void dxy_poisson_solver(
 			image_ptr<float, 1>(dst),
 			image_ptr<float, 1>(dx),
 			image_ptr<float, 1>(dy),
+			image_ptr<float, 1>(),
 			image_ptr<float, 1>(),
 			image_ptr<float, 1>(),
 			iteration_time, base_level);
@@ -539,6 +614,7 @@ void dxy_poisson_solver(
 			image_ptr<unsigned short, 1>(dy),
 			image_ptr<unsigned short, 1>(xborder),
 			image_ptr<unsigned short, 1>(yborder),
+			image_ptr<unsigned short, 1>(),
 			iteration_time, base_level);
 	}
 	else if (dst.elm_size() == 4)
@@ -549,6 +625,55 @@ void dxy_poisson_solver(
 			image_ptr<float, 1>(dy),
 			image_ptr<float, 1>(xborder),
 			image_ptr<float, 1>(yborder),
+			image_ptr<float, 1>(),
+			iteration_time, base_level);
+	}
+	else
+	{
+		throw bear_exception(exception_type::other_error, "unsupported image type!");
+	}
+}
+
+
+
+void dxy_poisson_solver(
+	bear::dynamic_image_ptr dst,
+	bear::dynamic_image_ptr dx,
+	bear::dynamic_image_ptr dy,
+	bear::dynamic_image_ptr constrain,
+	unsigned int iteration_time,
+	int base_level)
+{
+	if (constrain.height() != dst.height() ||
+		constrain.width() != dst.width() ||
+		dst.width() != dx.width() ||
+		dst.height() != dx.height() ||
+		dst.width() != dy.width() ||
+		dst.height() != dy.height())
+	{
+		throw bear_exception(exception_type::size_different, "wrong input image size!");
+	}
+
+	if (dst.elm_size() == 2)
+	{
+		dxy_poisson_solver_inner(
+			image_ptr<unsigned short, 1>(dst),
+			image_ptr<unsigned short, 1>(dx),
+			image_ptr<unsigned short, 1>(dy),
+			image_ptr<unsigned short, 1>(),
+			image_ptr<unsigned short, 1>(),
+			image_ptr<unsigned short, 1>(constrain),
+			iteration_time, base_level);
+	}
+	else if (dst.elm_size() == 4)
+	{
+		dxy_poisson_solver_inner(
+			image_ptr<float, 1>(dst),
+			image_ptr<float, 1>(dx),
+			image_ptr<float, 1>(dy),
+			image_ptr<float, 1>(),
+			image_ptr<float, 1>(),
+			image_ptr<float, 1>(constrain),
 			iteration_time, base_level);
 	}
 	else

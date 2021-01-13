@@ -10,6 +10,7 @@
 enum PossionConstrain
 {
 	PossionNoConstrain,
+	PossionMaskConstrain,
 	PossionEstimateConstrain,
 	PossionPanoramaConstrain,
 	PossionPanoramaBorderConstrain,
@@ -23,6 +24,7 @@ struct PStichingParam
 	bool float_precision = false;
 
 	bool edge_restriction = false;
+	bool mask_constrain = false;
 	float edge_smooth = 1.0f;
 
 	bear::const_dynamic_image_ptr panorama_border;
@@ -33,6 +35,7 @@ struct PStichingParam
 void poisson_stiching_merged(
 	bear::dynamic_image_ptr dst,
 	bear::const_dynamic_image_ptr src,
+	bear::const_dynamic_image_ptr ref,
 	bear::const_dynamic_image_ptr mask,
 	PStichingParam param);
 
